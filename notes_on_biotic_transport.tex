@@ -1,0 +1,348 @@
+\documentclass[12pt]{amsart}
+\usepackage{fullpage}
+
+\begin{document}
+
+\section{Problem statement}
+
+As provided in the draft manuscript (Equations P1 and P2).
+\begin{align}
+  \frac{d\tilde{\rho}_i}{dt} & = -\nabla \cdot (\mathbf{v}\tilde{\rho}_{i}) +
+  \alpha_{i} \tilde{\theta}_{i} -
+  \beta_{i}\tilde{\rho}_{i} \label{eq:mass_balance_original}\\
+  \frac{d\tilde{\theta}_i}{dt} & = \tilde{\delta}_{i}  \tilde{f}_i(\tilde{\theta}) -
+  \alpha_{i} \tilde{\theta}_{i} +
+  \beta_{i}\rho_i +
+  D_{i}\nabla^2\theta_{i} \label{eq:growth_and_diffusion_original}
+\end{align}
+Note the appearance of total derivatives on the left hand sides and
+partial derivatives on the right.  
+
+The left hand side of Equation~\ref{eq:mass_balance_original} is the 
+local conservation law for spore density in the upper layer while
+the sum on the right hand side describes the net change of density to
+exchange with the lower layer.  Similarily, the left hand side of
+Equation~\ref{eq:growth_and_diffusion_original} describes the local diffusive
+spread of spores within the lower layer while the terms on the right
+describe density dependent growth and exchange with the upper layer.  
+
+Since the manuscript only deals with the single species, a single
+spatial dimension and a constant wind speed, it seems reasonable to
+drop the subscripts, rescale variables and simplify the notation.  
+\begin{align}
+  \left(\frac{\partial}{\partial t} +
+  \frac{\partial}{\partial x} +
+  b\right)\rho &=
+  a \theta \label{eq:balance_law}\\
+  \left(\frac{\partial}{\partial t} - \mathcal{D}\frac{\partial^2}{\partial x^2}+ a\right)\theta -
+  f(\theta) & = b\rho \label{eq:inhomogeneous_Fisher_Kolmogorov}
+\end{align}
+Note, the left hand side of Equation~\ref{eq:balance_law} defines a
+linear partial differential operator describing advective flow and
+deposition.  Equation~\ref{eq:inhomogeneous_Fisher_Kolmogorov} is
+semilinear --- the non-linearity is confined to the zeroth order
+term~\cite{RozhdestvenskiiJanenko:1983}.
+
+\subsection{Boundary conditions and space of solutions}
+
+The boundary conditions are not explicit stated anywhere in the
+manuscript.  The boundary conditions
+\begin{equation}
+  \lim_{x\rightarrow \pm\infty} \theta(x, t) = 0 =
+  \lim_{x\rightarrow \pm\infty} \rho(x, t) 
+\end{equation}
+will be used here.
+
+Similarly, the class of allowed solutions is not defined.  In this
+note, it is assumed that the $\rho(\cdot, t)$ and $\theta(\cdot,
+t)$ are elements in $C^{\infty}(\mathbb{R})$ for every $t$.
+
+\subsection{Solution to homogeneous balance law}
+
+It is straightforward to verify that the
+solution to the generalized balance law 
+\begin{equation}
+  \left(\frac{\partial}{\partial y} + 
+  \frac{\partial}{\partial z} + c\right)g(y, z) = 0
+  \label{eq:homogeneous_conservation_law}
+\end{equation}
+for initial condition $g(y, 0) = h(y)$ is~\cite[Equation 4.2.1.1]{PolyaninSaitsevMoussiaux:2002}
+\begin{equation}
+  g(y, z) = e^{-cz}h(y-z)
+  \label{eq:homogeneous_conservation_solution}
+\end{equation}
+The natural time scale for relaxation is $1/c$ and the length scale is
+determined by the initial conditions.
+
+In this case, let
+\begin{align}
+  \eta &= x+t \\
+  \zeta &= sx+(1-s)t
+\end{align}
+where $0\le s\le 1$ is a parameter to be chosen later.
+This transformation is non-singular
+\begin{equation}
+  J(y, z; \eta, \zeta) =
+  \begin{pmatrix}
+    \frac{\partial\eta}{\partial t} & \frac{\partial \eta}{\partial x} \\
+    \frac{\partial\zeta}{\partial t} & \frac{\partial\zeta}{\partial x} 
+  \end{pmatrix}
+  =
+  \begin{pmatrix}
+    -1 & 1 \\
+    1-s & s 
+  \end{pmatrix}
+\end{equation}
+thus $\det(J) = -s - (1-s) = -1$.
+
+\begin{align}
+  \frac{\partial}{\partial x} & = \frac{\partial\eta}{\partial x}\frac{\partial}{\partial\eta} +
+  \frac{\partial\zeta}{\partial x}\frac{\partial}{\partial\zeta} \\
+  &= \frac{\partial}{\partial\eta} + s \frac{\partial}{\partial\zeta} \\
+  \frac{\partial}{\partial t} & = \frac{\partial\eta}{\partial t}\frac{\partial}{\partial\eta} +
+  \frac{\partial\zeta}{\partial t}\frac{\partial}{\partial\zeta}\\
+  &= -\frac{\partial}{\partial\eta} + (1-s) \frac{\partial}{\partial\zeta} 
+\end{align}
+
+Let $\tilde{g}(\eta, \zeta) = g(x, t)$
+\begin{equation}
+  \left(\frac{\partial}{\partial\zeta} + c\right)\tilde{g}(\eta, \zeta) = 0
+\end{equation}
+so
+\begin{equation}
+\tilde{g}(\eta, \zeta) = e^{-c\zeta}\phi(\eta)  
+\end{equation}
+where $\phi(\eta)$ is an arbitrary smooth function.  Note, this equation preserves positivity,
+\begin{equation}
+  \phi(\zeta)\ge 0 \implies \tilde{g}(\eta, \zeta)=g(x, t)\ge 0
+\end{equation}
+
+\subsection{System in transformed coordinates}
+
+Let $\tilde{\rho}(\xi, \eta) = \rho(x, t)$ and $\tilde{\theta} = \theta(x, t)$.  Since
+\begin{align}
+  \frac{\partial^2}{\partial x^2} & = \left(\frac{\partial}{\partial\eta} + s \frac{\partial}{\partial\zeta}\right)\left(\frac{\partial}{\partial\eta} + s \frac{\partial}{\partial\zeta}\right) \\
+  &= \frac{\partial^2}{\partial\eta^2} + 2s \frac{\partial^2}{\partial\eta\partial\zeta} + s^2\frac{\partial^2}{\partial\zeta^2}
+\end{align}
+the transformation of Equation~\ref{eq:inhomogeneous_Fisher_Kolmogorov} is simplified by choosing $s=0$.
+Performing these substitutions yields the transformed equations
+\begin{align}
+  \left(\frac{\partial}{\partial\zeta}+b\right)\tilde{\rho} &= a\tilde{\theta} \label{eq:transformed_balance_law}\\
+  \left(\frac{\partial}{\partial\zeta}-\frac{\partial}{\partial\eta}-
+  \mathcal{D}\frac{\partial^2}{\partial\eta^2}+a\right)\tilde{\theta} + f(\tilde{\theta}) &= b\tilde{\rho}
+  \label{eq:transformed_inhomogeneous_Fisher_Kolmogorov}
+\end{align}
+
+\subsection{Growth law}
+
+The growth law is a continuously differentially function $f \in C^{1}\left(\mathbb{R}_{+}, \mathbb{R}\right)$
+\begin{itemize}
+  %
+\item Linear growth at low density
+  \begin{align}
+    f(\theta=0) &= 0 \\
+    f'(\theta = 0) &= 1
+  \end{align}
+  %
+\item Convexity
+  \begin{equation}
+    \frac{f(\theta_1) + f(\theta_2)}{2} < f\left(\frac{\theta_1 + \theta_2}{2}\right)
+  \end{equation}
+  %
+\item Vanishing at $\theta_{\text{max}}$
+  \begin{equation}
+    f(\theta_{\text{max}}) = 0
+  \end{equation}
+  %
+\end{itemize}
+
+It follows that $f'(\theta)$ is a decreasing function and $f(\theta) <
+0$ for $\theta>\theta_{\text{max}}$.  
+
+%------------------------------
+
+\section{Conservation law}
+
+Adding Equations~\ref{eq:balance_law}
+and~\ref{eq:inhomogeneous_Fisher_Kolmogorov} yield a relationship for
+the rate of change of total amount of material in the system.
+\begin{equation}
+  \frac{\partial\rho}{dt} + \frac{\partial\theta}{dt} =
+  \frac{\partial \rho}{\partial x} +
+  \mathcal{D}\frac{\partial^2\theta}{\partial x^2} +
+  f(\theta)
+\end{equation}
+Note, this equation depends on $\mathcal{D}$,
+but not $a$ or $b$.  Integrating both sides over all $x$
+\begin{align}
+  \int_{-\infty}^{\infty} \frac{\partial}{\partial t} \left[\rho(x,
+    t)+\theta(x,t)\right]\; dx &=
+  \int_{-\infty}^{\infty} f(\theta) \; dx +
+  \int_{-\infty}^{\infty} \frac{\partial}{\partial x} \left[-\rho +
+    \mathcal{D}\frac{\partial \theta}{\partial x}\right]\; dx \\
+  \frac{\partial}{\partial t} \int_{-\infty}^{\infty}
+  \left[\rho(x, t)+\theta(x,t)\right]\; dx &=
+  \int_{-\infty}^{\infty} f(\theta) \; dx + \left.\left[-\rho +
+    \mathcal{D}\frac{\partial \theta}{\partial
+      x}\right]\right|_{x=-\infty}^{x=+\infty}
+ \end{align}
+The contribution of the transport term vanishes due to the boundary
+conditions leaving a non-linear conservation law
+\begin{equation}
+  \frac{\partial}{\partial t} \int_{-\infty}^{\infty}
+  \left[\rho(x, t)+\theta(x,t)\right]\; dx = \int_{-\infty}^{\infty}
+  f(\theta) \; dx
+  \label{eq:general_conservation_law}
+\end{equation}
+in which none of the parameters appear explicitly.  This is a
+common-sense statement -- if a spore has been produced it must be
+found somewhere in the air or on the ground, and if it is on the
+ground then it contributes to further growth.
+
+If $\theta(x, t) < \theta_{\max}$ then the right-hand side of
+Equation~\ref{eq:general_conservation_law} is positive and the total
+mass increases with time.
+
+%------------------------------
+
+\section{Properties of the solution for $\mathcal{D}=0$}
+
+Setting $\mathcal{D}=0$ in
+Equation~\ref{eq:transformed_inhomogeneous_Fisher_Kolmogorov} leaves
+the simplified dynamical equation for the growth layer
+\begin{equation}
+  \left(\frac{\partial}{\partial\zeta}-\frac{\partial}{\partial\eta}+a\right)\tilde{\theta}
+  + f(\tilde{\theta}) = b\tilde{\rho}\label{eq:growth_alone}
+\end{equation}
+The dependence on $\rho$ can be eliminated using Equation~\ref{eq:transformed_balance_law}
+\begin{align}
+  \left(\frac{\partial}{\partial\zeta} + b\right)\left(
+  \frac{\partial}{\partial\zeta}
+  -\frac{\partial}{\partial\eta}+a\right)\tilde{\theta} -
+  \left(\frac{\partial}{\partial\zeta} + b\right)f(\tilde{\theta}) &
+  = b\left(\frac{\partial}{\partial\zeta} + b\right)\tilde{\rho} \\ &
+  = ab\tilde{\theta}
+  \label{eq:fixed_point_formulation}
+\end{align}
+or, by rearrangement,
+\begin{align}
+  \left(\frac{\partial}{\partial\zeta} + b\right)
+  \left(\frac{\partial}{\partial\zeta}-\frac{\partial}{\partial\eta}+a\right)\tilde{\theta}
+  -ab\tilde{\theta} & = \left(\frac{\partial}{\partial\zeta} + b\right)f(\tilde{\theta}) \\
+    \left(
+    \frac{\partial^2}{\partial\zeta^2} -
+    \frac{\partial^2}{\partial\eta\partial\zeta} +
+    (a+b)\frac{\partial}{\partial\zeta} -
+    b\frac{\partial}{\partial\eta} 
+  \right)\tilde{\theta} &=
+\end{align}
+Note, the left hand side is a linear, second order partial
+differential equation in $\tilde{\theta}$ with constant coefficients
+describing the net effect of the transport processes while the right
+hand side is a linear, first order differential equation in
+$f(\tilde{\theta})$ with constant coefficients describing a damped wave in the
+growth rate.
+
+
+
+%------------------------------
+
+\section{Characteristic values for linearized system with logistic growth and $D=0$}
+
+For logistic growth, $f(\theta) = \theta(1-\theta)$ so
+\begin{equation}
+  \left(\frac{\partial}{\partial\zeta} + b\right)f(\tilde{\theta}) = 
+  \left(\frac{\partial}{\partial\zeta} +b \right)\tilde{\theta} -
+  \left(\frac{\partial}{\partial\zeta} + b\right)\tilde{\theta}^2
+\end{equation}
+implies
+\begin{equation}
+    \left(
+    \frac{\partial^2}{\partial\zeta^2} -
+    \frac{\partial^2}{\partial\eta\partial\zeta} +
+    (a+b-1)\frac{\partial}{\partial\zeta} -
+    b\frac{\partial}{\partial\eta}-b
+  \right)\tilde{\theta} =  - \left(\frac{\partial}{\partial\zeta} + b\right)\tilde{\theta}^2
+\end{equation}
+
+The right hand side will be ignored near $\tilde{\theta}=0$ to yield the linearized equation
+\begin{equation}
+    \left(
+    \frac{\partial^2}{\partial\zeta^2} -
+    \frac{\partial^2}{\partial\eta\partial\zeta} +
+    (a+b-1)\frac{\partial}{\partial\zeta} -
+    b\frac{\partial}{\partial\eta}-b
+    \right)\tilde{\theta} = 0
+  \label{eq:linearized_logistic_theta}    
+\end{equation}
+
+Inserting the expression $\tilde{\theta}$ as an inverse Fourier transform
+\begin{equation}
+  \tilde{\theta}(\eta, \zeta) = \int_{-\infty}^{\infty}\int_{-\infty}^{\infty} A(k, s) e^{i(s\zeta-k\eta)} \; ds dk
+\end{equation}
+into Equation~\ref{eq:linearized_logistic_theta} yields the characteristic equation
+\begin{align}
+  (-is)^2-(is)(-ik)+(a+b-1)(is)-b(-ik)-b &= 0 \\
+  -s^2+\left[k+i(a+b-1)\right]s -b(1+ik) 
+\end{align}
+which has two solutions 
+\begin{align}
+  s_{\pm}(k)
+  & = \frac{k + i(a+b-1)}{2} \pm \frac{\sqrt{\left[k + i(a+b-1)\right]^2-4\left[b+ik(a-1)\right]}}{2} \\
+  & = \frac{k + i(a+b-1)}{2} \pm \frac{\sqrt{\left[k + i(1-a+b)\right]^2-4ab}}{2}
+  \label{eq:dispersion_relation_combined}
+\end{align}
+This form of the dispersion relation is somewhat unsatisfactory
+because neither solution is single valued as a function of $k$ with
+the usual choice of branch cut along the negative real axis.  This 
+situation can be resolved by redefining $s_{\pm}$ as
+\begin{equation}
+  s_{\pm}(k) = \frac{k + i(a+b-1)}{2} \pm \frac{1}{2}\sqrt{k - k_1}\sqrt{k - k_2} \\
+  \label{eq:dispersion_relation_separated}
+\end{equation}
+where
+\begin{align}
+  k_1 & = -i(1-a+b)-2\sqrt{ab} \\
+  k_2 & = -i(1-a+b)+2\sqrt{ab}   
+\end{align}
+and the usual branch cut definition is used for all square roots.
+Note, this is equivalent to defining a branch cut between $k_1$ and
+$k_2$ for the square root term in appearing in
+Equation~\ref{eq:dispersion_relation_combined}.
+
+%------------------------------
+
+\section{Non-linear dynamics with $D=0$}
+
+Equation~\ref{eq:fixed_point_formulation} defines $\theta$ as a fixed point
+\begin{equation}
+\theta = G\left[\theta\right] = \frac{1}{ab}  \left(\frac{\partial}{\partial t} + \frac{\partial}{\partial x} +
+  b\right)\left( \frac{\partial\theta}{\partial t} - f(\theta) +
+  a\theta\right)
+  \label{eq:fixed_point_functional}
+\end{equation}
+of the iteration
+\begin{equation}
+  \theta_{k+1} = G\left[\theta_{k}\right]
+  \label{eq:fixed_point_iteration}
+\end{equation}
+This iteration will converge if $G$ is a contraction mapping on an appropriate space.
+
+\begin{equation}
+\begin{split}
+  ab\left(\frac{G\left[\theta_1\right]+G\left[\theta_2\right]}{2}\right) & = 
+  \left(\frac{\partial}{\partial t} + \frac{\partial}{\partial x} +  b\right)
+  \left(\frac{\partial}{\partial t} - a\right) \left(\frac{\theta_1+\theta_2}{2}\right) - \\
+  & \quad \left(\frac{\partial}{\partial t} + \frac{\partial}{\partial x} +  b\right)\left[\frac{f(\theta_1)+f(\theta_2)}{2}\right] 
+\end{split}
+\end{equation}
+Now,
+\begin{equation}
+\frac{f(\theta_1)+f(\theta_2)}{2} \le f\left(\frac{\theta_1+\theta_2}{2}\right)
+\end{equation}
+%------------------------------
+
+\bibliographystyle{unsrt}
+\bibliography{biotic_transport}
+
+\end{document}

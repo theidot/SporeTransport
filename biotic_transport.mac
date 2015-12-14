@@ -1,0 +1,30 @@
+%load('pdiff) ;
+
+declare([x, t], [real, scalar]) ;
+declare([a,b,c,s,D], [real, scalar, constant]) ;
+assume(a>0) ;
+assume(b>0) ;
+assume(c>0) ;
+assume(s>0, 1>s) ;
+
+depends(f, theta) ;
+depends([theta, rho], [x, t]) ;
+
+f(theta) := theta ;
+
+al : theta(x, t) = (1/a)*('diff(rho(x, t), t) + 'diff(rho(x, t), x) + b*rho(x, t)) ;
+gl : rho(x, t) = (1/b)*('diff(theta(x, t),t) - D*'diff(theta(x, t), x, 2) - f(theta(x, t)) + a*theta(x, t)) ;
+
+f(theta) := theta ;
+
+declare([s, k], scalar) ;
+
+
+new_gl : subst(gl, al) ;
+new_gl : ratexpand(expand(ev(%, nouns))) ;
+pde : ratsimp(ratexpand(expand(a*b*new_gl-a*b*theta(x, t)))) ;
+atvalue('diff(theta(x, t), t), t=0, 0) ;
+laplace(pde, t, s) ;
+
+laplace(al, t, s) ;
+laplace(gl, t, s) ;

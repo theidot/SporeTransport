@@ -1,0 +1,13 @@
+chareq : (%i*s)*(%i*s)+(%i*s)*(-%i*k)+(a+b-1)*(%i*s)-b*(-%i*k)-b ;
+chareq : ratexpand(expand(-1*chareq)) ;
+
+q : collectterms(chareq,s) ;
+A : rectform(coeff(q, s, 2)) ;
+B : rectform(coeff(q, s, 1)) ;
+C : rectform(coeff(q, s, 0)) ;
+
+p : collectterms(ratexpand(expand(B*B-4*A*C)), k) ;
+
+D : rectform(coeff(p, k, 2)) ;
+E : rectform(coeff(p, k, 1)) ;
+F : rectform(coeff(p, k, 0)) ;
