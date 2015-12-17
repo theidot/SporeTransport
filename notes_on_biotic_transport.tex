@@ -15,13 +15,46 @@
 
 \email{Dave.Schneider@ars.usda.gov}
 
-\maketitle
-
-%------------------------------
-
 \begin{abstract}
-  A different approach to Oleg's model.
+  The Fisher-Kolmogorov equation
+  \begin{displaymath}
+    \left(\frac{\partial}{\partial t} + D\frac{\partial^2}{\partial
+      x}\right)\theta = \theta(1-\theta)
+  \end{displaymath}
+  subject to some initial condition $\Phi(x, 0) = p(x)$ is often used
+  as a starting point for the dispersal of a population with a
+  logistic growth law.  It is well known that solutions to this
+  equation evolving from initial conditions with compact support form
+  uniformly translating fronts at long times and large distances.
+  Extending this basic model has become a cottage industry by
+  generalizing the differential operator (e.g., adding advection terms
+  or introducing fraction derivatives) or alternative growth laws
+  (e.g., introducing spatial dependence or stronger non-linearities).
+
+  Motivated by the phenomenology of wind-driven dispersal of fungal
+  plant pathogens, we propose an alternative two-layer model based on
+  a separation of scales for transport.  The Fisher-Kolmogorov
+  equation is used as a caricature of growth and short-distance
+  dispersal due to winds at ground level.  A simple advection equation
+  is used to model the long-distance transport in the upper
+  atmosphere.  The two layers are coupled by means of rate constants
+  characterizing entrainment of spores released at ground level and
+  uplifted into the advection layer, and for deposition from the
+  advection layer into the ground layer.
+
+  As in the single-layer archetype, the two-layer model exhibits
+  uniformly translating wave fronts.  However, the speed of the fronts
+  in the two-layer model is different from that of fronts in a single layer
+  model obtained by augmenting a Fisher-Kolomogorov equation with a
+  advective term with the same ``wind speed''.  These differences can
+  be traced back to a fundamental distinction in the two classes of models.  In
+  the augmented single-layer model, the entire population is growing
+  as it is being advected through space.  In contrast, in the
+  two-layer model the growth of the population is limited to the
+  ground layer.
 \end{abstract}
+
+\maketitle
 
 %------------------------------
 
@@ -64,21 +97,23 @@ drop the subscripts, rescale variables and simplify the notation.
 \end{align}
 \end{subequations}
 
+%------------------------------
+
 \section{Qualitative structure}
 
 The left hand side of Equation~\ref{eq:balance_law} defines a
 linear partial differential operator describing advective flow and
 deposition.  Equation~\ref{eq:Fisher_Kolmogorov_balance} is
 semilinear --- the left hand side is a linear partial differential
-operator and the non-linearity due to the presence of the growth term 
+operator and the non-linearity is due to the presence of the growth term 
 on the right hand side~\cite{RozhdestvenskiiJanenko:1983}.
 
 This system can be recast in the suggestive form
 \begin{equation}
-\frac{\partial U}{\partial t} + \frac{\partial F(U)}{\partial x} =
-G\left[U\right]
+\frac{\partial u}{\partial t} + \frac{\partial F(u)}{\partial x} =
+G\left[u\right]
 \end{equation}
-where $U = (\rho, \theta)^{\text{tr}}$ is a vector of densities, and
+where $u = (\rho, \theta)^{\text{tr}}$ is a vector of densities, and
 $F$ and $G$ are the associated fluxes and sources.
 \begin{equation}
   \frac{\partial}{\partial t}
@@ -101,8 +136,9 @@ $F$ and $G$ are the associated fluxes and sources.
     -b\rho + a\theta\\
     b\rho - a\theta + f(\theta)
   \end{pmatrix}
+  \label{eq:densities_fluxes_sources}
 \end{equation}
-Note, $F(cU) = cF(U)$ consistent with the semilinear character of the
+Note, $F(cu) = cF(u)$ consistent with the semilinear character of the
 equations.
 
 Equations of this type have been extensively studied based on the
@@ -119,7 +155,7 @@ equations~\cite{Miyadera:1992,CazenaveHaraux:1998,Bellini-MoranteMcBride:1998}.
 The most important conclusion is that the exact solution can be
 written as
 \begin{equation}
-  U(x,t) = e^{Lt} U(x, s) + \int_{0}^{t} e^{L(t-s)}N\left[U(x, s)\right] \; ds
+  u(x,t) = e^{Lt} u(x, 0) + \int_{0}^{t} e^{L(t-s)}N\left[u(x, s)\right] \; ds
   \label{eq:nonlinear_semigroup}
 \end{equation}
 where $L$ is the generator defined by the linear part of the problem
@@ -128,11 +164,10 @@ it's precise properties depended on the domain of the linear
 differential operator obtained by splitting the problem into linear
 and non-linear parts, and the smoothness of the non-linear part.  This
 splitting is not unique and can be chosen to simplify calculations.
-
 Equation~\ref{eq:nonlinear_semigroup} shows that the non-linear parts
 of semilinear PDEs play roles somewhat analogous to inhomogeneous
 terms in the theory of linear PDEs.  In particular, the cumulative
-effects of the linear and non-linear terms are additive.  
+effects of the linear and non-linear terms are additive.
 
 \subsection{Initial conditions}
 
@@ -153,27 +188,123 @@ the sense of distributions.
 
 \subsection{Space of solutions}
 
-The class of allowed solutions is not defined.  Certainly, the
-densities must be non-negative at all times.  The open questions
-relate to the smoothness and integrability.  One way to proceed would
-be to assume that at all times and the total amount of material is
-finite
+As noted above, the semigroup approach involves a careful
+specification of the domain of the generator and related issues of
+continuity and convergence.  To begin, one must define the space of
+allowed solutions, $\mathsf{X}$.  Clearly, $\mathsf{X}$ must be some
+sort of topological vector space over $\mathbb{R}$.
+
+Note, valid solutions to Equation~\ref{eq:densities_fluxes_sources}
+involve non-negative densities $\rho(x, t) \ge 0$, $\theta(x, t) > 0$,
+so it makes sense to equip $\mathsf{X}$ with the partial order relation,
 \begin{equation}
-  \int_{-\infty}^{\infty} \rho(x, t) + \theta(x, t) \; dx < \infty
+  \phi_1(x, t) \le \phi_2(x, t), \psi_1(x, t) \le \psi_2(x, t) \iff
+  \begin{pmatrix}
+    \phi_1 \\
+    \psi_1
+  \end{pmatrix} \le
+  \begin{pmatrix}
+    \phi_2 \\
+    \psi_2
+  \end{pmatrix}
 \end{equation}
-i.e, $\rho(\cdot, t)$, $\theta(\cdot, t) \in L^{1}(\mathbb{R})$.
-Alternatively, one could consider the more general requirement of
-local finiteness
+This partial order on $\mathsf{X}$ is clearly translational invariant, positive
+homogeneous, and inherits meet and join operations defined by the
+pointwise $\max$ and $\min$ operations on the underlying densities.
+Thus, $\mathsf{X}$ can be viewed as a vector lattice, and valid solutions
+are elements of the positive cone.
+
+The theory of non-linear semigroups is based on the additional
+assumption that $\mathsf{X}$ is a Banach space -- a vector space that is
+complete with respect to the topology induced by a norm.  Adopting
+this approach involves re-interpreting $u$ as a $\mathsf{X}$-valued function of
+time in some interval $t\in T=\left[t_0, t_1\right]$
+\begin{displaymath}
+ u : T \rightarrow X, t \rightarrow u(t) 
+\end{displaymath}
+so that Equation~\ref{eq:densities_fluxes_sources} becomes an ordinary
+differential equation in $\mathsf{X}$.  The maximal time interval over
+which $u$ can be defined is related to the fact that
+Equation~\ref{eq:densities_fluxes_sources} is an initial value
+problem.  There is no loss of generality in assuming $t_0=0$ since
+Equation~\ref{eq:densities_fluxes_sources} is autonomous.  The upper
+end of the interval is limited by the possibility that $u$ might
+``escape'' $\mathsf{X}$ at $t=t_1$
 \begin{equation}
-  \int_{x_{1}}^{x_2} \rho(x, t) + \theta(x, t) \; dx < \infty
+  \lim_{t\uparrow t_1} \left\|u(t)\right\|_{\mathsf{X}} = \infty
+  \label{eq:u_escapes_X}
 \end{equation}
-i.e, $\rho(\cdot, t)$, $\theta(\cdot, t) \in
-L^{1}_{\text{loc}}(\mathbb{R})$.
-Similar arguments can be applied to the fluxes suggesting the
-requirement
+
+The problem at hand presents an embarrassment of riches -- the
+existence of many norms motivated by different aspects of the
+underlying biology processes and physical considerations.  The $L^{1}$
+norm arises from the real world restriction that the total population
+cannot become infinite
 \begin{equation}
-  \frac{\partial\theta}{\partial x} \in L^{1}_{\text{loc}}(\mathbb{R})
+  \left\|u(t)\right\|_{L^{1}} = \int_{-\infty}^{\infty} \rho(x, t) +
+  \theta(x, t) \; dx < \infty
 \end{equation}
+Similiar common-sense considerations suggest that the total density
+must be finite almost everywhere,
+\begin{equation}
+  \left\|u(t)\right\|_{L^{\infty}} = \sup_{-\infty < x < \infty}
+  \rho(x, t) + \theta(x, t) < \infty
+\end{equation}
+The next step is to consider the fluxes.  Introducing a Sobolev norm 
+involving first and second order spatial derivatives
+would guarantee that the total flux is finite
+\begin{equation}
+  \left\|u(t)\right\|_{W^{2,1}} = \left\|u\right\|_{L^{1}} + 
+  \left\|\frac{\partial u}{\partial x}\right\|_{L^{1}} +
+  \left\|\frac{\partial^2 u}{\partial x^2}\right\|_{L^{1}} < \infty  
+\end{equation}
+or is finite almost everywhere
+\begin{equation}
+  \left\|u(t)\right\|_{W^{2,\infty}} =
+  \max\left\{\left\|u\right\|_{L^{\infty}}, 
+  \left\|\frac{\partial u}{\partial x}\right\|_{L^{\infty}},
+  \left\|\frac{\partial^2 u}{\partial
+    x^2}\right\|_{L^{\infty}}\right\} < \infty
+\end{equation}
+The $W^{2, 1}$ and $W^{2, \infty}$ norms do not exclude the presence
+of a finite number of finite discontinuities in the solution or its
+derivatives.
+
+The complete specification of the problem must include the
+definition of boundary conditions at $x=\pm\infty$, and issue not
+explicitly addressed anywhere in the manuscript.  However, the
+following assumptions are used implicitly
+\begin{equation}
+  0 = 
+  \lim_{x\rightarrow \pm\infty} \rho(x, t) =
+  \lim_{x\rightarrow \pm\infty} \frac{\partial\rho}{\partial x} =  
+  \lim_{x\rightarrow \pm\infty} \theta(x, t)  =  
+  \lim_{x\rightarrow \pm\infty} \frac{\partial \theta}{\partial x} = 
+  \lim_{x\rightarrow \pm\infty} \frac{\partial^2 \theta}{\partial x^2}
+  \label{eq:boundary_conditions}
+\end{equation}
+
+
+Finally, one must address the source term, $G\left[u\right]$, on the
+right hand side of Equation~\ref{eq:densities_fluxes_sources}.  The
+simplest case is to choose a norm such that $G: X \rightarrow X$ is
+bounded.  
+
+The selection of a norm, or set of norms, to use in the analysis of
+various aspects of the problem is simplified by exploiting the known
+relationships among the various norms and the effect of imposing the
+boundary conditions (cf.\ Equation~\ref{eq:boundary_conditions}).  For
+example, it is be shown~\cite[Theorem 8.1.1]{Strichartz:2003} that
+if $f\in W^{2,1}(\mathbb{R})$ implies
+\begin{equation}
+  \left\|f\right\|_{L^{\infty}} \le c \left\|f\right\|_{W^{2,1}}
+\end{equation}
+for some constant $c$.  In fact, by identifying continuous functions
+with their equivalence classes,
+\begin{equation}
+  W^{2,1}(\mathbb{R}) \subseteq C^{1}(\mathbb{R})
+\end{equation}
+
 
 The latter choice has many practical advantages since
 $L^{1}_{\text{loc}}(\mathbb{R}) \subset \mathcal{D}'(\mathbb{R})$
@@ -186,7 +317,7 @@ for all test functions $\phi\in \mathcal{D}(\mathbb{R}) =
 C^{\infty}_{0}(\mathbb{R})$ implies $h=0$ by Du Bois-Reymond's
 lemma~\cite{Grubb:2009}.
 
-The boundary conditions are not explicit stated anywhere in the
+Also, The boundary conditions are not explicit stated anywhere in the
 manuscript.  The boundary conditions
 \begin{equation}
   0 = 
@@ -197,12 +328,17 @@ manuscript.  The boundary conditions
 \end{equation}
 will be assumed here.  
 
+
+
+
 By using standard methods from the theory of distributions one can
 proceed indirectly by considering the action of the differential
 operators on elements of $\mathcal{D}(\mathbb{R})$ and inferring the
 action on elements of $L^{1}_{\text{loc}}(\mathbb{R})$ using
 ``integration by parts''.  Note also that non-trivial constant
 functions do not satisfy the boundary conditions stated above.
+
+
 
 \subsection{Solution to homogeneous balance law}
 
