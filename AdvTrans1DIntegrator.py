@@ -16,6 +16,18 @@ class Integrator(object):
     def grid(self):
         return np.copy(self.__x)
 
+    def delta_plus(self, u):
+        return np.roll(u, -1) - u
+
+    def delta_zero(self, u):
+        return np.roll(u, -1) - np.roll(u, 1)
+
+    def delta_minus(self, u):
+        return u - np.roll(u, 1)
+
+    def delta_square(self, u):
+        return np.roll(u, -1) - 2.0*u + np.roll(u, 1)
+
     def update_graphics(self, u, t, w):
 
         #
@@ -41,8 +53,8 @@ class UpwindEulerAdvectiveTransport(Integrator):
         super(UpwindEulerAdvectiveTransport, self).__init__(xgrid)
         
     def timestep(self, u, Peclet):
-        up = np.roll(u, -1)
-        return u - Peclet*(up-u)
+        um = np.roll(u, 1)
+        return u - Peclet*self.delta_minus(u)
 
 class LaxFriedrichsAdvectiveTransport(Integrator):
 
@@ -52,7 +64,7 @@ class LaxFriedrichsAdvectiveTransport(Integrator):
     def timestep(self, u, Peclet):
         up = np.roll(u, -1)
         um = np.roll(u, +1)
-        return 0.5*(up + um) - 0.5*Peclet*(up - um)
+        return 0.5*(up + um) - 0.5*Peclet*self.delta_zero(u)
 
 class LaxWendroffAdvectiveTransport(Integrator):
 
@@ -60,7 +72,25 @@ class LaxWendroffAdvectiveTransport(Integrator):
         super(LaxWendroffAdvectiveTransport, self).__init__(xgrid)
 
     def timestep(self, u, Peclet):
-        up = np.roll(u, -1)
-        um = np.roll(u, +1)
-        return u - 0.5*Peclet*(up-um) + 0.5*Peclet*Peclet*(up - 2.0*u + um)
+        return u - 0.5*Peclet*self.delta_zero(u) + 0.5*Peclet*Peclet*self.delta_square(u)
+
+class BeamWarmingAdvectiveTransport(Integrator):
+
+    def __init__(self, xgrid):
+        super(BeamWarmingAdvectiveTransport, self).__init__(xgrid)
+
+    def timestep(self, u, Peclet):
+        ustar = u - Peclet*self.delta_minus(u)
+        return 0.5*(u + ustar - Peclet*self.delta_minus(ustar) - Peclet*self.delta_square(np.roll(u, 1)))
+
+class MacCormackAdvectiveTransport(Integrator):
+
+    def __init__(self, xgrid):
+        super(MacCormackAdvectiveTransport, self).__init__(xgrid)
+
+    def timestep(self, u, Peclet):
+        ustar = u - Peclet*self.delta_plus(u)
+        return 0.5*(u + ustar - Peclet*self.delta_minus(ustar))
+
+    
 

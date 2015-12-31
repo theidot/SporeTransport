@@ -24,7 +24,7 @@ class TransParser(argparse.ArgumentParser):
         self.add_argument('-i', '--initial-condition', dest = 'ic', type = str,
                           default = 'lambda x : 0.0 if x < 1 or x > 2 else 1.0',
                           help = 'Initial condition as a string for eval()')
-        self.add_argument('-m', '--method', choices = ['U', 'LF', 'LW'], default = 'U', dest = 'method',
+        self.add_argument('-m', '--method', choices = ['U', 'LF', 'LW', 'BW', 'M'], default = 'U', dest = 'method',
                           help = 'Integration method (string)')
         self.add_argument('-u', '--update-frequency', type = int, dest = 'graphics_update', default = 10,
                           help = 'Update frequency for graphics (integer, number of timesteps)')
@@ -42,6 +42,10 @@ def main(args):
         integrator = LaxFriedrichsAdvectiveTransport(x)
     elif args.method == 'LW':
         integrator = LaxWendroffAdvectiveTransport(x)
+    elif args.method == 'BW':
+        integrator = BeamWarmingAdvectiveTransport(x)
+    elif args.method == 'M':
+        integrator = MacCormackAdvectiveTransport(x)
     else:
         raise NotImplementedError('Integration method "{0}" not implemented'.format(args.method))
 
