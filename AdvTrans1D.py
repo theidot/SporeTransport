@@ -2,7 +2,7 @@
 
 import argparse, sys
 import numpy as np
-from Integrator import *
+from AdvTrans1DIntegrator import *
 
 class TransParser(argparse.ArgumentParser):
 
