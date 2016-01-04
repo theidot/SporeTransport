@@ -1,0 +1,322 @@
+% -*- mode: Noweb; noweb-code-mode: python-mode -*-
+
+\documentclass{amsart}
+
+\usepackage{graphicx,noweb,fullpage}
+
+\begin{document}
+
+@
+
+\author{Dave Schneider}
+\address{Plant-Microbe Interaction Research Unit\\
+  R.W.\ Holley Center \\
+  USDA Agricultural Research Service \\
+  538 Tower Road \\ Ithaca, NY 14583}
+
+\email{Dave.Schneider@ars.usda.gov}
+
+\title[Initial value problems for balance laws]{Initial value
+  problems specified by systems of balance laws}
+
+\begin{abstract}
+Finite difference methods are often used to obtain numerical
+approximations ot the solution of initial value (Cauchy) problems for
+partial differential equations describing fluid flows involving
+diffusion and/or advection processes.  If sources or reactions are
+also present, then the composition or amount of fluid can change over
+time.  This note focuses on unsteady flows specified balance laws of
+the form
+\begin{displaymath}
+  \frac{\partial u}{\partial t} + \frac{\partial F}{\partial x} = S
+\end{displaymath}
+where $u$ is a density (assumed positive), $F$ is defines the
+associated fluxes, and $S$ is a source term that describes production,
+loss or transformation of material.  
+\end{abstract}
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+\label{sec:intro}
+
+Finite difference methods are often used to obtain numerical
+approximations ot the solution of initial value (Cauchy) problems for
+partial differential equations describing fluid flows involving
+diffusion and/or advection processes.  If sources or reactions are
+also present, then the composition or amount of fluid can change over
+time.  This note focuses on unsteady flows that can be described by
+a system of $N$ coupled balance laws of the form
+\begin{equation}
+  \frac{\partial u}{\partial t} + \frac{\partial F\left[u\right]}{\partial x} = S\left[u\right]
+\end{equation}
+where $u$ are the densities (assumed positive), $F$ is defines the
+associated fluxes, and $S$ is a source term that describes production,
+loss or transformation of material.
+
+Most unsteady problems are either parabolic or hyperbolic in nature,
+depending on the form of the flux term.  It is common to encounter
+systems where the flux or source terms are non-linear.  Attention here
+is limited to so-called semilinear problems where only the source term
+is allowed to have a non-linear dependence on the density.
+
+@ 
+
+\section{Source code}
+\label{app:source_code}
+
+The following Python~\cite{Python:2016} source code files and
+associated documentation can be generated from this
+file using [[notangle]] and [[noweave]],
+respectively.~\cite{Ramsey:1994,JohnsonJohnson:1997}.
+
+<<*>>=
+<<TransportPDECauchy.py>>
+<<AdvTransport1D.py>>
+<<DiffTransport1D.py>>
+
+@
+
+This code was written by an employee of the US Department of
+Agriculture in the course of official duties.  As a result, all of
+this code is in the public domain.
+
+<<Disclaimer>>=
+'''
+                         PUBLIC DOMAIN NOTICE 
+                    Agricultural Research Service 
+               United States Department of Agriculture 
+
+This software/database is a "United States Government Work" under the 
+terms of the United States Copyright Act.  It was written as part of 
+the author's official duties as a United States Government employee 
+and thus cannot be copyrighted.  This software/database is freely 
+available to the public for use. The Department of Agriculture (USDA) 
+and the U.S. Government have not placed any restriction on its use or 
+reproduction. 
+
+Although all reasonable efforts have been taken to ensure the accuracy 
+and reliability of the software and data, the USDA and the U.S. 
+Government do not and cannot warrant the performance or results that 
+may be obtained by using this software or data. The USDA and the U.S. 
+Government disclaim all warranties, express or implied, including 
+warranties of performance, merchantability or fitness for any 
+particular purpose. 
+
+Please cite the author in any work or product based on this material. 
+
+David J. Schneider
+R.W. Holley Center
+USDA Agricultural Research Service
+538 Tower Road, Ithaca NY 14853
+'''
+
+@
+
+[[TransportPDECauchy]] is an abstract Python class that encapsulates
+the implementation of the various terms in the PDE and associated
+initial conditions.  Classes which implement specific PDEs should be
+derived from this class (see below).
+
+<<TransportPDECauchy.py>>=
+<<Disclaimer>>
+
+__version__ = '{0}.{1}'.format(0, 1)
+
+__all__ = ['TransportPDECauchy', 'np']
+
+<<Import libraries>>
+
+class TransportPDECauchy(object):
+    """An abstract class for abstract Cauchy problems involving
+    multicomponent balance laws.
+    """
+      
+    <<Structural initialization>>
+    <<Impose initial conditions>>
+    <<Get density on grid>>
+    <<Get flux on grid>>
+    <<Get source on grid>>
+
+@
+
+The Python Developers Guide for Python Code ([[PEP
+    0008]])~\cite{PEP0008:2016} contains many suggestions for
+formatting source code, version control, making conventions, and
+general programming recommendations.  Some of these recommendations
+cannot be easily applied or enforced in a literate programming
+environment.  On the other hand, some tasks become very simple.  For
+example, the ordering of imports so that imports from the standard
+libraries~\cite{PythonStandardLibrary:2016} precede those from third
+parties.
+
+<<Import libraries>>=
+<<Import standard libraries>>
+<<Import third party libraries>>
+
+@
+
+The numerical solution is computed via finite difference methods
+on a uniform grid using the NumPy library~\cite{NumPy:2015}.  So, it
+makes sense to use NumPy arrays to store data and as return values.
+
+<<Import third party libraries>>=
+import numpy as np
+
+@
+
+Initialization of an [[TransportPDECauchy]] instance requires a
+user-supplied grid in the form of a NumPy array and, optionally a
+means to define the initial density profile on that grid and a textual
+description.  If the initial conditions are supplied, the density is
+initialized by a call to the [[initial_conditions()]] method.  If not,
+the user must call the [[initial_condition()]] method prior to
+commencing integration.
+
+<<Structural initialization>>=
+def __init__(self, grid, ic=None, description=None):
+    """Generic initialization"""
+    self.description = description
+    self.__grid = grid
+    if ic is None:
+        self.__density = None
+    else:
+	self.initial_condition(ic)
+
+@
+
+Other classes must also access the computational grid.  For example, the 
+visualization methods of the [[Integrator]] class.
+
+<<Get grid>>=
+def grid(self):
+    # return a copy of the grid
+    return np.copy(self.__grid)
+
+@
+
+The user can specify initial conditions in several ways, including a
+lambda function.  Since the initialization process depends on the way
+the conditions are specified, it is necessary to check the argument
+types.  There is no simple way of accessing the type of a lambda
+function without using the standard [[types]] library.
+
+<<Import standard libraries>>=
+import types
+    
+<<Impose initial conditions>>=
+def initial_condition(self, ic):
+    if type(ic) == types.LambdaType or type(ic) == types.FunctionType:
+       self.__density = np.array([ic(x, 0) for x in self.__grid], dtype=np.float)
+    elif isinstance(ic, list) or isinstance(ic, tuple):
+       self.__density = np.array(ic, dtype=np.float)
+    elif isinstance(ic, np.array):
+       self.__density = ic
+    else:
+       msg = 'Don\'t know how to initialize density from type {0}'
+       raise NotImplementedError(msg.format(type(ic)))
+
+@
+
+The density is computed at the grid points and stored.
+
+<<Get density on grid>>=
+def density(self):
+    """Return the density at each grid point"""
+    
+    assert(self.__density is not None)
+    return np.copy(self.__density)
+
+@
+
+The actual computation of fluxes on the grid must be implemented in
+derived classes. 
+
+<<Get flux on grid>>=
+def flux(self):
+    """Abstract method for evaluating fluxes"""
+    
+    msg = 'flux() method must be overridden in derived classes'
+    raise NotImplementedError(msg)
+
+@
+
+The computation of the sources must also be implemented in derived
+classes, if present.
+
+<<Get source on grid>>=
+def source(self, t = None):
+    """By default, sources are considered absent.  This method should be 
+    overridden in derived classes if sources are present.
+    """
+    
+    return np.zeros_like(self.__density)	
+
+@
+    
+\section{Derived classes describing specific equations}
+
+\subsection{Advective transport equation}
+
+<<AdvTransport1D.py>>=
+<<Disclaimer>>
+
+__version__ = '{0}.{1}'.format(0, 0)
+
+from TransportPDECauchy import *
+
+class AdvTransport1D(TransportPDECauchy):
+    """Simple linear advective transport in 1D w/o sources"""
+    
+    def __init__(self, grid, ic, Peclet):
+    	super(AdvTransport1D, self).__init__(grid = grid, ic = ic)
+        self.Peclet = Peclet
+
+    def flux(self):
+        return self.Peclet*np.copy(self.__density)
+
+    def source(self, t):
+        return np.zeros_like(self.__density)
+
+@
+
+\subsection{Simple diffusion equation}
+
+<<DiffTransport1D.py>>=
+<<Disclaimer>>
+
+__version__ = '{0}.{1}'.format(0, 0)
+
+from TransportPDECauchy import *
+
+class DiffTransport1D(TransportPDECauchy):
+    """Simple linear diffusive transport in 1D w/o sources"""
+    
+    def __init__(self, grid, ic, D):
+    	super(DiffTransport1D, self).__init__(grid = grid, ic = ic)
+        self.D = D
+
+    def flux(self):
+        return (-self.D*np.copy(self.__density[0]), -self.D*np.copy(self.__density[1]))
+
+    def source(self, t):
+        return np.zeros_like(self.__density)
+
+@
+
+\subsection{Advection-diffusion equation}
+        
+\subsection{Fisher-Kolmogorov-Petrovsky-Piscounov equation}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\clearpage
+\bibliographystyle{unsrt}
+\bibliography{TransportPDE}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
+
