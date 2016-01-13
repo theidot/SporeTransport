@@ -61,7 +61,8 @@ A single Python~\cite{Python:2016} source code is produced
 
 @
 
-which defines a single class
+which contains definitions of two class, [[FiniteDifferences]] and
+[[TestFiniteDifferences]], and a short main program.
 
 <<FiniteDifferences.py>>=
 <<Import standard libraries>>
@@ -69,10 +70,28 @@ which defines a single class
 <<Define public programming interface>>
 <<[[FiniteDifferences]] class>>
 <<Unit test framework>>
+<<Main program to run unit tests>>
 
-@ 
+@
 
-The coefficients for the finite difference operators will be stored as
+The [[FiniteDifferences]] class contains only class-level attributes
+and defines the entire public programming interface.
+
+<<Define public programming interface>>=
+__all__ = ['FiniteDifferences']
+
+@
+
+The [[unittest]] module will be used to automate testing.  In
+particular the [[TestFiniteDifferences]] class is derived from
+[[unittest.TestCase]].
+
+<<Import standard libraries>>=
+import unittest
+
+@
+
+The coefficients for the finite difference operators are stored as
 rational fractions~\cite{PythonStandardLibrary:2016} in dictionaries
 indexed by integer offsets
 
@@ -81,8 +100,8 @@ from gmpy2 import mpq
 
 @ 
 
-The finite difference operators themselves are represented using SciPy~\cite{SciPy:2015}
-sparse matrices constructed by diagonals.
+The finite difference operators themselves are represented using
+SciPy~\cite{SciPy:2015} sparse matrices constructed by diagonals.
 
 <<Import third party libraries>>=
 from scipy.sparse import diags
@@ -97,76 +116,77 @@ import numpy as np
 
 @
 
-The [[unittest]] module will be used to automate testing.
-
-<<Import standard libraries>>=
-import unittest
-
-@
-
-The [[FiniteDifferences]] class contains only class-level attributes.
-
-<<Define public programming interface>>=
-__all__ = ['FiniteDifferences']
-
 <<[[FiniteDifferences]] class>>=
-
 class FiniteDifferences(object):
-    from fractions import Fraction
-
     <<Coefficients for one-sided FD approximations>>
     <<Coefficients for centered FD approximations>>
-
     <<Finite differences on periodic lattices>>
 
 @ 
 
-Explicit application of one-sided finite differences of data on periodic lattices.
+Explicit application of one-sided finite differences of data on
+periodic lattices using cyclic permutations of vectors.
 
 <<Finite differences on periodic lattices>>=
-def periodic_one_sided_diff(u, der_order, approx_order=2):
+def periodic_one_sided_stencil(u, dorder, aorder=2):
+    '''Apply one-sided stencil for derivative to vector'''
+    
     v = np.zeros_like(u)
-    for offset, coeff in FiniteDifferences.osd[der_order, approx_order]:
+    for offset, coeff in FiniteDifferences.osd[dorder, aorder].items():
 	v += float(coeff)*np.roll(u, -offset)
     return v
 
 @
 
-Construct sparse matrix representations on periodic lattices.
+Matrix representations of finite difference operators on periodic
+lattices have a sparse circulant structure.  The offsets and
+coefficients of the finite difference stencil are retrieved and
+broadcasted along diagonals.  Coefficients with non-vanishing offsets
+are used to create two separate diagonals to enforce periodicity.
 
 <<Finite differences on periodic lattices>>=
-def periodic_one_sided_diff_operator(N,  der_order, approx_order=2):
+def periodic_one_sided_op(N,  der_order, approx_order=2):
+    '''Compute N-dimensional sparse matrix representation for one-sided difference approximation'''
+    
     offsets = list()
     coeffs  = list()
     for offset, coeff in FiniteDifferences.osd[der_order, approx_order].items():
-        print(offset, coeff)
         offsets.append(offset)
         coeffs.append(float(coeff))
         if offset > 0:
             offsets.append(offset-N)
             coeffs.append(float(coeff))
-    return diags(coeffs, offsets, shape=(N, N), dtype=np.float)
+    return diags(coeffs, offsets, shape=(N, N), dtype=np.float).tocsr()
 
 @ 
 
-Explicit application of centered finite differences of data on non-periodic lattices.
+Explicit application of centered finite differences of data on
+non-periodic lattices using cyclic permutation of vectors.
 
 <<Finite differences on periodic lattices>>=
 
-def periodic_centered_diff(u, der_order, approx_order=2):
+def periodic_centered_stencil(u, dorder, aorder=2):
+    '''Apply centered difference stenciy to vector'''
+    
     v = np.zeros_like(u)
-    for offset, coeff in FiniteDifferences.cd[der_order, approx_order]:
+    for offset, coeff in FiniteDifferences.cd[dorder, aorder].items():
 	v += float(coeff)*np.roll(u, -offset)
     return v
 
 @
 
-Construct sparse matrix representations for finite difference
-operators on non-periodic lattices.
+Matrix representations for centered finite difference operators on
+periodic lattices also have a sparse circulant structure.
+Coefficients with non-vanishing offsets create two separate diagonals
+due to ``wrap around''.  In contrast to the one-sided case above,
+offsets may be positive or negative, which are handled separately.
 
 <<Finite differences on periodic lattices>>=
 
-def periodic_centered_diff_operator(N,  der_order, approx_order=2):
+def periodic_centered_op(N,  der_order, approx_order=2):
+    '''Compute N-dimensional sparse matrix representation 
+       for centered difference approximation'''
+    
     offsets = list()
     coeffs  = list()
     for offset, coeff in FiniteDifferences.cd[der_order, approx_order].items():
@@ -178,19 +198,48 @@ def periodic_centered_diff_operator(N,  der_order, approx_order=2):
             else:
                 offsets.append(offset+N)
             coeffs.append(float(coeff))
-    return diags(coeffs, offsets, shape=(N, N), dtype=np.float)
+    return diags(coeffs, offsets, shape=(N, N), dtype=np.float).tocsr()
 
 @
 
-The finite difference coefficents satisfy
+\section{Unit testing}
+\label{sec:unit_testing}
+
+The [[unittest]] module provides a [[TestCase]] class that is
+customized to invoke the tests defined below.
+
+<<Unit test framework>>=
+
+class TestFiniteDifferences(unittest.TestCase):
+    <<Test sums of coefficients>>
+    <<Test action of stencils>>
+    <<Test action of operators>>
+@
+
+Running the [[FiniteDifferences.py]] source file as a script will
+automatically invoke the unit test framework.        
+
+<<Main program to run unit tests>>=
+
+if __name__ == '__main__':
+    unittest.main()
+
+@
+    
+The finite difference coefficents satisfy~\cite{Fornberg:1988}
 \begin{equation}
   \sum_{\nu} c^{k}_{n, \nu} = \begin{cases}
     1 & \text{if $k=0$} \\
     0 & \text{otherwise}
-    \end{cases}
+  \end{cases}
+  \label{eq:coefficient_sums}
 \end{equation}
 
-<<Unit test framework>>=
+Since the coefficients are stored as multiple precision rationals, it
+makes sense to require that Equation~\ref{eq:coefficient_sums} be 
+satisfied exactly using rational arithmetic operations.
+
+<<Test sums of coefficients>>=
 def validate_scheme(scheme):
     msg = """\
           Error detected for approximation of order {0}\
@@ -214,28 +263,108 @@ def validate_scheme(scheme):
 
 @
 
-The [[unittest]] module provides a [[TestCase]] class that can be
-customized to invoke one or more custom tests.
+The actual unit tests involves ensuring that the coefficient of both
+the one-sided and centered stencils obey
+Equation~\ref{eq:coefficient_sums}.
 
-<<Unit test framework>>=
-
-class TestFiniteDifferences(unittest.TestCase):
-    def test_sums(self):
-        err_count = validate_scheme(FiniteDifferences.osd)
-        err_count += validate_scheme(FiniteDifferences.cd)
-        self.assertEqual(err_count, 0)
+<<Test sums of coefficients>>=
+def test_sums(self):
+    err_count = TestFiniteDifferences.validate_scheme(FiniteDifferences.osd)
+    err_count += TestFiniteDifferences.validate_scheme(FiniteDifferences.cd)
+    self.assertEqual(err_count, 0)
 
 @
+    
+The action of the finite difference stencils and operators can easily
+be tested on trigonometric functions whose period matches the grid.
 
-Running the [[FiniteDifferences.py]] source file as a script will
-automatically invoke the unit test framework.        
+<<Test action of stencils>>=
+def validate_stencils(scheme, diff):
+    from math import factorial
+    err_count = 0
+    N = 256
+    dx = 1.0/float(N)
+    s = 2.0*np.pi*dx
+    grid = s*np.arange(N)
+    print('Derivative      order          Max. deviation')
+    rec = '{0:10} {1:10}      {2}'
+    for (k, n) in sorted(scheme.keys()):
+        q = np.cos(grid)
+        if k == 1:
+            tst = -np.sin(grid)
+        elif k == 2:
+            tst = -np.cos(grid)
+        elif k == 3:
+            tst = np.sin(grid)
+        elif k == 4:
+            tst = np.cos(grid)
+        else:
+            errmsg = 'Approximations of order {0}, {1} not handled'
+            raise RuntimeError(errmsg.format(k, n))
+        r = (1.0/s**k)*diff(q, k, n)
+        dev = max([abs(d) for d in r - tst])
+        print(rec.format(k, n, dev))
+        if dev > 10.0*factorial(n)*s**(n):
+            err_count += 1
 
-<<Unit test framework>>=
+    return err_count
 
-if __name__ == '__main__':
-    unittest.main()
+<<Test action of stencils>>=
+def test_stencils(self):
+    validate = TestFiniteDifferences.validate_stencils
+    print('\nOne-sided difference stencils')
+    count = validate(FiniteDifferences.osd,
+                     FiniteDifferences.periodic_one_sided_stencil)
+    print('\nCentered difference stencils')
+    count += validate(FiniteDifferences.cd,
+                      FiniteDifferences.periodic_centered_stencil)
+    self.assertEqual(count, 0)
 
 @ 
+
+<<Test action of operators>>=
+def validate_operators(scheme, diff):
+    from math import factorial
+    err_count = 0
+    N = 256
+    dx = 1.0/float(N)
+    s = 2.0*np.pi*dx
+    grid = s*np.arange(N)
+    print('Derivative      order          Max. deviation')
+    rec = '{0:10} {1:10}      {2}'
+    for (k, n) in sorted(scheme.keys()):
+        q = np.cos(grid)
+        if k == 1:
+            tst = -np.sin(grid)
+        elif k == 2:
+            tst = -np.cos(grid)
+        elif k == 3:
+            tst = np.sin(grid)
+        elif k == 4:
+            tst = np.cos(grid)
+        else:
+            errmsg = 'Approximations of order {0}, {1} not handled'
+            raise RuntimeError(errmsg.format(k, n))
+        r = (1.0/s**k)*diff(N, k, n)*q
+        dev = max([abs(d) for d in r - tst])
+        print(rec.format(k, n, dev))
+        if dev > 10.0*factorial(n)*s**(n):
+            err_count += 1
+
+    return err_count
+
+<<Test action of operators>>=
+def test_operators(self):
+    validate = TestFiniteDifferences.validate_operators
+    print('\nOne-sided difference operators')
+    count = validate(FiniteDifferences.osd,
+                     FiniteDifferences.periodic_one_sided_op)
+    print('\nCentered difference operators')
+    count += validate(FiniteDifferences.cd,
+                      FiniteDifferences.periodic_centered_op)
+    self.assertEqual(count, 0)
+
+@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 
@@ -585,6 +714,9 @@ cd[2, 8] = {
 
 @
 
+Centered finite difference approximation to third derivatives~\cite[Table
+  3.1-1 on p.~16]{Fornberg:1998a}.
+
 <<Coefficients for centered FD approximations>>=
 cd[3, 2] = {
     -2:  -mpq(1, 2),
@@ -618,7 +750,11 @@ cd[3, 6] = {
 
 @
 
+Centered finite difference approximation to fourth derivatives~\cite[Table
+  3.1-1 on p.~16]{Fornberg:1998a}.
+
 <<Coefficients for centered FD approximations>>=
+
 cd[4, 2] = {
     -2:  mpq(1),
     -1: -mpq(4),
@@ -649,6 +785,7 @@ cd[4, 6] = {
     +4:  mpq(7, 240)}
 
 @
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \clearpage
