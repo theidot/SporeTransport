@@ -19,34 +19,44 @@ env['PYTHON3']   = '/usr/local/bin/python3'
 ######################################################################
 
 #Create tex from noweb
-env.Append(BUILDERS = {'NWtoTeX' : Builder(action='$WEAVE -filter \'sed "/^@use /s/_/\\\\_/g;/^@defn /s/_/\\\\_/g"\' -n -delay $SOURCE > $TARGET', src_suffix='.nw', suffix='.tex')})
+env.Append(BUILDERS = {'NWtoTeX' : Builder(action='$WEAVE -filter \'sed "/^@use /s/_/\\\\_/g;/^@defn /s/_/\\\\_/g"\' -n -delay $SOURCES > $TARGET', src_suffix='.nw', suffix='.tex')})
 
 #Create py from noweb
-env.Append(BUILDERS = {'NWtoPy' : Builder(action='$TANGLE -R${TARGET.file} $SOURCE > $TARGET', src_suffix='.nw', suffix='.py')})
+env.Append(BUILDERS = {'NWtoPy' : Builder(action='$TANGLE -R${TARGET.file} $SOURCES > $TARGET', src_suffix='.nw', suffix='.py')})
 
 ######################################################################
 # Documentation
 ######################################################################
 
-tex = env.NWtoTeX('TransportPDECauchy')
-pdf = env.PDF(tex)
-pdf = env.Depends(pdf, [tex])
+transtex = env.NWtoTeX(source=['TransportPDECauchy.nw', 'Disclaimer.nw'],
+                       target='TransportPDECauchy.tex')
+fdtex = env.NWtoTeX('FiniteDifferences')
+transpdf = env.PDF(transtex)
+fdpdf = env.PDF(fdtex)
+
+pdf = [fdpdf, transpdf]
 
 ######################################################################
 # Python files
 ######################################################################
 
-TransportPDECauchy = env.NWtoPy(source='TransportPDECauchy.nw',
+TransportPDECauchy = env.NWtoPy(source=['TransportPDECauchy.nw', 'Disclaimer.nw'],
 		                target='TransportPDECauchy.py')
 
-AdvTransport1D = env.NWtoPy(source='TransportPDECauchy.nw',
+AdvTransport1D = env.NWtoPy(source=['TransportPDECauchy.nw', 'Disclaimer.nw'],
 		            target='AdvTransport1D.py')
 
 
-DiffTransport1D = env.NWtoPy(source='TransportPDECauchy.nw',
+DiffTransport1D = env.NWtoPy(source=['TransportPDECauchy.nw', 'Disclaimer.nw'],
 		             target='DiffTransport1D.py')
 
-sources = [TransportPDECauchy, AdvTransport1D, DiffTransport1D]
+FiniteDifferences = env.NWtoPy(source=['FiniteDifferences.nw', 'Disclaimer.nw'],
+		             target='FiniteDifferences.py')
+
+sources = [TransportPDECauchy,
+           AdvTransport1D,
+           DiffTransport1D,
+           FiniteDifferences]
 
 ######################################################################
 # Default targets

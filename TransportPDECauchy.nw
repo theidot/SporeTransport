@@ -20,19 +20,23 @@
   problems specified by systems of balance laws}
 
 \begin{abstract}
-Finite difference methods are often used to obtain numerical
-approximations ot the solution of initial value (Cauchy) problems for
-partial differential equations describing fluid flows involving
-diffusion and/or advection processes.  If sources or reactions are
-also present, then the composition or amount of fluid can change over
-time.  This note focuses on unsteady flows specified balance laws of
-the form
+Initial value problems of partial differential equations describing
+flows involving diffusion and/or advection processes occur in many
+contexts in science and engineering.  If sources or reactions are also
+present, then the composition or amount of material being modeled can
+change over time.  This note summarizes some of the most basic
+mathematical and computional aspects of unsteady flows specified
+balance laws in divergence form
 \begin{displaymath}
-  \frac{\partial u}{\partial t} + \frac{\partial F}{\partial x} = S
+  \frac{\partial u}{\partial t} + \frac{\partial F}{\partial x} = S(u,
+  x, t)
 \end{displaymath}
-where $u$ is a density (assumed positive), $F$ is defines the
+where $u$ is a density (assumed positive), $F$ defines the
 associated fluxes, and $S$ is a source term that describes production,
-loss or transformation of material.  
+loss or transformation of the entities under consideration.
+Particular attention is paid to semilinear problems where
+the flux term is a linear operator so that any nonlinear effects 
+are due to the structure of the source term.  
 \end{abstract}
 
 \maketitle
@@ -42,27 +46,65 @@ loss or transformation of material.
 \section{Introduction}
 \label{sec:intro}
 
-Finite difference methods are often used to obtain numerical
-approximations ot the solution of initial value (Cauchy) problems for
-partial differential equations describing fluid flows involving
-diffusion and/or advection processes.  If sources or reactions are
-also present, then the composition or amount of fluid can change over
-time.  This note focuses on unsteady flows that can be described by
-a system of $N$ coupled balance laws of the form
+Initial value problems of partial differential equations describing
+flows involving diffusion and/or advection processes occur in many
+contexts in science and engineering.  If sources or reactions are also
+present, then the composition or amount of material being modeled can
+change over time.  This note summarizes some of the most basic
+mathematical and computional aspects of unsteady flows specified
+balance laws in divergence form
 \begin{equation}
-  \frac{\partial u}{\partial t} + \frac{\partial F\left[u\right]}{\partial x} = S\left[u\right]
+  \frac{\partial u}{\partial t} + \frac{\partial F}{\partial x} = S(u,
+  x, t)
+  \label{eq:balance_law_divergence_form}
 \end{equation}
-where $u$ are the densities (assumed positive), $F$ is defines the
+where $u$ is a density (assumed positive), $F$ defines the
 associated fluxes, and $S$ is a source term that describes production,
-loss or transformation of material.
+loss or transformation of the entities under consideration.
+Particular attention is paid to semilinear problems where
+the flux term is a linear operator so that any nonlinear effects 
+are due to the structure of the source term.
 
-Most unsteady problems are either parabolic or hyperbolic in nature,
-depending on the form of the flux term.  It is common to encounter
-systems where the flux or source terms are non-linear.  Attention here
-is limited to so-called semilinear problems where only the source term
-is allowed to have a non-linear dependence on the density.
+Most unsteady problems are semilinear and are either parabolic or
+hyperbolic in nature, depending on the form of the flux term.  For
+example, advective balance equation
+\begin{equation}
+  \frac{\partial u}{\partial t} + \frac{\partial \rho u}{\partial x} =
+  \sigma
+  \label{eq:advective_balance}
+\end{equation}
+and the telegrapher's equation
+\begin{equation}
+  \frac{\partial}{\partial t} \begin{pmatrix} u \\ v \end{pmatrix} + 
+  \frac{\partial}{\partial x} \begin{pmatrix}  0 & - \alpha \\ -\alpha
+    & 0 \end{pmatrix}\begin{pmatrix} u \\ v\end{pmatrix} =
+    \begin{pmatrix}  0 \\ -2\beta v \end{pmatrix}
+    \label{eq:telegrapher}
+\end{equation}
+are hyperbolic assuming $\rho, \alpha \ne 0$.  In contrast,
+advection-reaction-diffusion equations
+\begin{equation}
+  \frac{\partial u}{\partial t} + \frac{\partial}{\partial x}
+  \left(cu -D \frac{\partial u}{\partial x}\right) = S(u)
+  \label{eq:advection_reaction_diffusion}
+\end{equation}
+are parabolic.
+
+An obvious question is whether the solutions to
+Equation~\ref{eq:advection_reaction_diffusion} somehow approach those
+of Equation~\ref{eq:advective_balance} as $D\rightarrow 0$ provided
+$c=\rho$.  In fact, under appropriate hypotheses the solutions to the
+two equations do converge and the analysis offers considerable insight
+into the numerical solution of Equation~\ref{eq:advective_balance} by
+finite difference methods.  Similar arguments can be made about
+Equation~\ref{eq:telegrapher}
+and~\ref{eq:advection_reaction_diffusion} if $c=0$, $\alpha
+\rightarrow \infty$ and $\beta \rightarrow \infty$ subject to the
+constraint that $\beta^2/2\alpha = D$ is constant.
 
 @ 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Source code}
 \label{app:source_code}
@@ -79,58 +121,38 @@ respectively.~\cite{Ramsey:1994,JohnsonJohnson:1997}.
 
 @
 
-This code was written by an employee of the US Department of
-Agriculture in the course of official duties.  As a result, all of
-this code is in the public domain.
+% ------------------------------
 
-<<Disclaimer>>=
-'''
-                         PUBLIC DOMAIN NOTICE 
-                    Agricultural Research Service 
-               United States Department of Agriculture 
+\subsection{Coding standards}
+\label{ssec:coding_standards}
 
-This software/database is a "United States Government Work" under the 
-terms of the United States Copyright Act.  It was written as part of 
-the author's official duties as a United States Government employee 
-and thus cannot be copyrighted.  This software/database is freely 
-available to the public for use. The Department of Agriculture (USDA) 
-and the U.S. Government have not placed any restriction on its use or 
-reproduction. 
+The Python Developers Guide for Python Code (PEP
+0008)~\cite{PEP0008:2016} contains many suggestions for formatting
+source code, version control, naming conventions, and general
+programming recommendations.  Some of these recommendations cannot be
+easily applied or enforced in a literate programming environment.  On
+the other hand, some tasks become very simple.
 
-Although all reasonable efforts have been taken to ensure the accuracy 
-and reliability of the software and data, the USDA and the U.S. 
-Government do not and cannot warrant the performance or results that 
-may be obtained by using this software or data. The USDA and the U.S. 
-Government disclaim all warranties, express or implied, including 
-warranties of performance, merchantability or fitness for any 
-particular purpose. 
+PEP 0008 suggests that documentation strings be provided for each
+method so users can obtain information interactively by invoking the
+[[help()]] function in the interpreter.  This will be done below.
 
-Please cite the author in any work or product based on this material. 
+%------------------------------
 
-David J. Schneider
-R.W. Holley Center
-USDA Agricultural Research Service
-538 Tower Road, Ithaca NY 14853
-'''
+\subsection{Overview of the [[TransportPDECauchy]] base class}
+\label{ssec:overview_TransportPDECauchy}
 
-@
-
-[[TransportPDECauchy]] is an abstract Python class that encapsulates
+[[TransportPDECauchy]] is an base class that encapsulates
 the implementation of the various terms in the PDE and associated
 initial conditions.  Classes which implement specific PDEs should be
 derived from this class (see below).
 
 <<TransportPDECauchy.py>>=
-<<Disclaimer>>
-
-__version__ = '{0}.{1}'.format(0, 1)
-
-__all__ = ['TransportPDECauchy', 'np']
-
+<<Header>>
 <<Import libraries>>
 
 class TransportPDECauchy(object):
-    """An abstract class for abstract Cauchy problems involving
+    """An base class for abstract Cauchy problems involving
     multicomponent balance laws.
     """
       
@@ -142,13 +164,28 @@ class TransportPDECauchy(object):
 
 @
 
-The Python Developers Guide for Python Code ([[PEP
-    0008]])~\cite{PEP0008:2016} contains many suggestions for
-formatting source code, version control, making conventions, and
-general programming recommendations.  Some of these recommendations
-cannot be easily applied or enforced in a literate programming
-environment.  On the other hand, some tasks become very simple.  For
-example, the ordering of imports so that imports from the standard
+PEP 0008 recommends a particular ordering of documentation strings, versioning
+information, etc.\ at the top of the file.
+
+<<Header>>=
+<<Disclaimer>>
+
+__version__ = '{0}.{1}'.format(0, 1)
+
+<<Expose public programming interface>>
+
+@
+
+%------------------------------
+
+\subsection{Public domain notice and disclaimer}
+\label{ssec:disclaimer}
+
+\input{Disclaimer.nw}
+
+@
+
+PEP 0008 also recommends that imports from the standard
 libraries~\cite{PythonStandardLibrary:2016} precede those from third
 parties.
 
@@ -164,6 +201,18 @@ makes sense to use NumPy arrays to store data and as return values.
 
 <<Import third party libraries>>=
 import numpy as np
+
+@ 
+
+PEP 0008 also suggests exposing the public portions of the programming
+interface by setting the [[__all__]] attribute.  This construction
+defines what is imported when the library is imported with the
+statement [[from TransportPDECauchy import *]].  The NumPy library
+really is an integral part of the implementation, and exposing it here
+obviates the need for the user to import it separately.
+
+<<Expose public programming interface>>=
+__all__ = ['TransportPDECauchy', 'np']
 
 @
 
@@ -255,11 +304,74 @@ def source(self, t = None):
     return np.zeros_like(self.__density)	
 
 @
-    
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{Derived classes describing specific equations}
 
-\subsection{Advective transport equation}
+%------------------------------
 
+\subsection{Advective transport equation}
+\label{ssec:advective}
+
+The advective balance equation 
+\begin{equation}
+  \frac{\partial u}{\partial t} + \frac{\partial \rho u}{\partial x} =
+  \sigma
+  \label{eq:advective_transport_1D_inhomogeneous_PDE}
+\end{equation}
+provides an important benchmark for numerical work
+because it has has very simple exact
+solution~\cite[pp.\ 18-19]{Evans:1998}.  Indeed, if $\rho$ is a
+positive real constant and $u(x, 0) = g(x)$ 
+then
+\begin{equation}
+  u(x, t) = g(x-\rho t) + \int_{0}^{t} \sigma\left(x+\rho(s-t)\right)
+  \; ds
+  \label{eq:advective_transport_1D_inhomogeneous_solution}  
+\end{equation}
+if $\sigma$ is a sufficiently well behaved function of $x$ or $t$.
+
+The form of this exact solution reveals why this superficially simple
+problem is so hard to approximate numerically.  The first term can be
+interpreted as a pulse or wave with a shape defined by the initial
+conditions that propagates at a finite speed without damping or
+distortion.  Said another way, there are plane wave solutions to the
+homogeneous equation
+\begin{equation}
+  \frac{\partial w}{\partial t} + \frac{\partial c w}{\partial x} = 0
+  \label{eq:advective_transport_1D_homogeneous_PDE}
+\end{equation}
+To verify this, insert the function $w(x, t) =
+\exp\left[i(kx-\omega)t\right]$
+into Equation~\ref{eq:advective_transport_1D_homogeneous_PDE} to obtain
+\begin{equation}
+  \left(\frac{\partial}{\partial t} + c\frac{\partial}{\partial
+    x}\right) w = i(ck-\omega)w 
+\end{equation}
+Note, the right hand side vanishes if $\omega = ck$ so that $w$ represents
+an undamped wave with phase velocity
+\begin{equation}
+  v_p = \omega/k = c
+\end{equation}
+and group velocity
+\begin{equation}
+  v_g = \frac{d\omega}{dk} = c
+\end{equation}
+
+These quantities $v_p$ and $v_g$ turn out to be very important in
+understanding the behavior of the numerical solution of initial value
+problems for dispersive partial differential equations~\footnote{Those
+  with plane wave solutions involving frequency-dependent wave
+  numbers.} obtained using finite difference
+methods~\cite{Trefethen:1982}.  In general, one expects solutions with
+uniformly propagating wave fronts to move at the group velocity at
+long times.  However, one of the most basic difficulties with typical
+finite difference schemes is the introduction of an artificial
+frequency-dependent attenuation of plane waves.  This damping is
+typically pronounced at high frequencies, leading to smearing of wave
+fronts and other sharp features at long times.
+        
 <<AdvTransport1D.py>>=
 <<Disclaimer>>
 
@@ -282,7 +394,10 @@ class AdvTransport1D(TransportPDECauchy):
 
 @
 
+%------------------------------        
+
 \subsection{Simple diffusion equation}
+\label{ssec:diffusion}
 
 <<DiffTransport1D.py>>=
 <<Disclaimer>>
@@ -306,9 +421,15 @@ class DiffTransport1D(TransportPDECauchy):
 
 @
 
+%------------------------------        
+
 \subsection{Advection-diffusion equation}
-        
+\label{ssec:advection_diffusion}
+
+%------------------------------
+
 \subsection{Fisher-Kolmogorov-Petrovsky-Piscounov equation}
+\label{ssec:FKPP}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
