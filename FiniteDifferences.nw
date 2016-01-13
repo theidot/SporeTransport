@@ -1,0 +1,660 @@
+% -*- mode: Noweb; noweb-code-mode: python-mode -*-
+
+\documentclass{amsart}
+
+\usepackage{graphicx,noweb,fullpage}
+
+\begin{document}
+
+@
+
+\author{Dave Schneider}
+\address{Plant-Microbe Interaction Research Unit\\
+  R.W.\ Holley Center \\
+  USDA Agricultural Research Service \\
+  538 Tower Road \\ Ithaca, NY 14583}
+
+\email{Dave.Schneider@ars.usda.gov}
+
+\title[Finite difference methods]{Finite difference methods in Python}
+
+\begin{abstract}
+Finite difference methods are attractive methods for solving some
+classes of partial differential equations.  
+\end{abstract}
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+\label{sec:intro}
+
+The solution of ordinary and partial differential equations by finite
+difference methods involves approximating the derivatives of functions
+from the function values at grid points.  Given the values of $f:
+\mathbb{R} \rightarrow \mathbb{R}$ at grid points
+\begin{equation}
+ \mathbf{X} = \left\{\ldots, x_{-4}, x_{-3}, x_{-2}, x_{-1}, x_{0}, x_{1}, x_{2},
+  x_{3}, x_{4}, \ldots\right\}
+\end{equation}
+the derivatives of $f$ are approximated as
+\begin{equation}
+  \left.\frac{d^kf}{dx^k}\right|_{x=x_{0}} =
+  \sum_{\nu=0}^{n} c^{k}_{n, \nu} f(x_{\nu}) + \mathcal{O}\left(\Delta x^{k-n+1}\right)
+\end{equation}
+The coefficients are tabulated in many places, including the text by
+Fornberg~\cite{Fornberg:1998a} which includes a wealth of theoretical
+insight into the behavior of the finite difference methods and
+practical guidance on their implementation.  More details can be found
+in other works by the same author~\cite{Fornberg:1988, Fornberg:1998b}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Source code}
+\label{sec:source_code}
+
+A single Python~\cite{Python:2016} source code is produced
+
+<<*>>=
+<<FiniteDifferences.py>>
+
+@
+
+which defines a single class
+
+<<FiniteDifferences.py>>=
+<<Import standard libraries>>
+<<Import third party libraries>>
+<<Define public programming interface>>
+<<[[FiniteDifferences]] class>>
+<<Unit test framework>>
+
+@ 
+
+The coefficients for the finite difference operators will be stored as
+rational fractions~\cite{PythonStandardLibrary:2016} in dictionaries
+indexed by integer offsets
+
+<<Import standard libraries>>=
+from gmpy2 import mpq
+
+@ 
+
+The finite difference operators themselves are represented using SciPy~\cite{SciPy:2015}
+sparse matrices constructed by diagonals.
+
+<<Import third party libraries>>=
+from scipy.sparse import diags
+
+@
+
+Since the operators are stored as SciPy sparse matrices, it is natural to use
+NumPy~\cite{NumPy:2015} arrays to store vectors.
+
+<<Import third party libraries>>=
+import numpy as np
+
+@
+
+The [[unittest]] module will be used to automate testing.
+
+<<Import standard libraries>>=
+import unittest
+
+@
+
+The [[FiniteDifferences]] class contains only class-level attributes.
+
+<<Define public programming interface>>=
+__all__ = ['FiniteDifferences']
+
+<<[[FiniteDifferences]] class>>=
+
+class FiniteDifferences(object):
+    from fractions import Fraction
+
+    <<Coefficients for one-sided FD approximations>>
+    <<Coefficients for centered FD approximations>>
+
+    <<Finite differences on periodic lattices>>
+
+@ 
+
+Explicit application of one-sided finite differences of data on periodic lattices.
+
+<<Finite differences on periodic lattices>>=
+def periodic_one_sided_diff(u, der_order, approx_order=2):
+    v = np.zeros_like(u)
+    for offset, coeff in FiniteDifferences.osd[der_order, approx_order]:
+	v += float(coeff)*np.roll(u, -offset)
+    return v
+
+@
+
+Construct sparse matrix representations on periodic lattices.
+
+<<Finite differences on periodic lattices>>=
+def periodic_one_sided_diff_operator(N,  der_order, approx_order=2):
+    offsets = list()
+    coeffs  = list()
+    for offset, coeff in FiniteDifferences.osd[der_order, approx_order].items():
+        print(offset, coeff)
+        offsets.append(offset)
+        coeffs.append(float(coeff))
+        if offset > 0:
+            offsets.append(offset-N)
+            coeffs.append(float(coeff))
+    return diags(coeffs, offsets, shape=(N, N), dtype=np.float)
+
+@ 
+
+Explicit application of centered finite differences of data on non-periodic lattices.
+
+<<Finite differences on periodic lattices>>=
+
+def periodic_centered_diff(u, der_order, approx_order=2):
+    v = np.zeros_like(u)
+    for offset, coeff in FiniteDifferences.cd[der_order, approx_order]:
+	v += float(coeff)*np.roll(u, -offset)
+    return v
+
+@
+
+Construct sparse matrix representations for finite difference
+operators on non-periodic lattices.
+
+<<Finite differences on periodic lattices>>=
+
+def periodic_centered_diff_operator(N,  der_order, approx_order=2):
+    offsets = list()
+    coeffs  = list()
+    for offset, coeff in FiniteDifferences.cd[der_order, approx_order].items():
+        offsets.append(offset)
+        coeffs.append(float(coeff))
+        if not offset == 0:
+            if offset > 0:
+                offsets.append(offset-N)
+            else:
+                offsets.append(offset+N)
+            coeffs.append(float(coeff))
+    return diags(coeffs, offsets, shape=(N, N), dtype=np.float)
+
+@
+
+The finite difference coefficents satisfy
+\begin{equation}
+  \sum_{\nu} c^{k}_{n, \nu} = \begin{cases}
+    1 & \text{if $k=0$} \\
+    0 & \text{otherwise}
+    \end{cases}
+\end{equation}
+
+<<Unit test framework>>=
+def validate_scheme(scheme):
+    msg = """\
+          Error detected for approximation of order {0}\
+          of derivatives of order {1}: sum is {2}\
+          but should be {3}\
+          """
+    count = 0
+    for (k, n) in sorted(scheme.keys()):
+        coeff = scheme[(k, n)]
+        s = sum(coeff.values())
+        if k == 0 :
+            tst = mpq(1, 1)
+        else:
+            tst = mpq(0, 1)
+        if abs(float(tst-s)) > 0:
+            print(msg.format(k, n, s, tst))
+            print(coeff)
+            count += 1
+
+    return count
+
+@
+
+The [[unittest]] module provides a [[TestCase]] class that can be
+customized to invoke one or more custom tests.
+
+<<Unit test framework>>=
+
+class TestFiniteDifferences(unittest.TestCase):
+    def test_sums(self):
+        err_count = validate_scheme(FiniteDifferences.osd)
+        err_count += validate_scheme(FiniteDifferences.cd)
+        self.assertEqual(err_count, 0)
+
+@
+
+Running the [[FiniteDifferences.py]] source file as a script will
+automatically invoke the unit test framework.        
+
+<<Unit test framework>>=
+
+if __name__ == '__main__':
+    unittest.main()
+
+@ 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+
+\appendix
+
+\section{Explicit formulae for finite difference approximation}
+\label{sec:explicit_formulae}
+
+One-sided finite difference approximations to first derivatives~\cite[Table
+  3.1-2 on p.~17]{Fornberg:1998a}.
+
+<<Coefficients for one-sided FD approximations>>=
+osd = dict()
+
+osd[1, 1] = {
+    0: mpq(-1),
+    1: mpq(1)
+    }
+
+osd[1, 2] = {
+    0: mpq(-3, 2),
+    1: mpq(2),
+    2: mpq(-1, 2)
+    }
+
+osd[1, 3] = {
+    0: mpq(-11, 6),
+    1: mpq(3),
+    2: mpq(-3, 2),
+    3: mpq(1, 3)
+    }
+
+osd[1, 4] = {
+    0: mpq(-25, 12),
+    1: mpq(4),
+    2: mpq(-3),
+    3: mpq(4, 3),
+    4: mpq(-1, 4)
+    }
+
+osd[1, 5] = {
+    0: mpq(-137, 60),
+    1: mpq(5),
+    2: mpq(-5),
+    3: mpq(10, 3),
+    4: mpq(-5, 4),
+    5: mpq(1, 5)
+    }
+
+osd[1, 6] = {
+    0: mpq(-49, 20),
+    1: mpq(6),
+    2: mpq(-15, 2),
+    3: mpq(20, 3),
+    4: mpq(-15, 4),
+    5: mpq(6, 5),
+    6: mpq(-1, 6)
+    }
+
+osd[1, 7] = {
+    0: mpq(-363, 140),
+    1: mpq(7),
+    2: mpq(-21, 2),
+    3: mpq(35, 3),
+    4: mpq(-35, 4),
+    5: mpq(21, 5),
+    6: mpq(-7, 6),
+    7: mpq(1, 7)
+    }
+
+osd[1, 8] = {
+    0: mpq(-761, 280),
+    1: mpq(8),
+    2: mpq(-14),
+    3: mpq(56, 3),
+    4: mpq(-35, 2),
+    5: mpq(56, 5),
+    6: mpq(-14, 3),
+    7: mpq(8, 7),
+    8: mpq(-1, 8)
+    }
+
+@
+
+One-sided finite difference approximations to second order
+derivatives~\cite[Table 3.1-2 on p.~17]{Fornberg:1998a}.
+
+<<Coefficients for one-sided FD approximations>>=
+osd[2, 1] = {
+    0: mpq(1),
+    1: -mpq(2),
+    2: mpq(1)
+    }
+
+osd[2, 2] = {
+    0: mpq(2),
+    1: -mpq(5),
+    2: mpq(4),
+    3:-mpq(1)
+    }
+
+osd[2, 3] = {
+    0:  mpq(35, 12),
+    1: -mpq(26, 3),
+    2:  mpq(19, 2),
+    3: -mpq(14, 3),
+    4:  mpq(11, 12)
+    }
+
+osd[2, 4] = {
+    0:  mpq(15, 4),
+    1: -mpq(77, 6),
+    2:  mpq(107, 6),
+    3: -mpq(13, 1),
+    4:  mpq(61, 12),
+    5: -mpq(5, 6)
+    }
+
+osd[2, 5] = {
+    0:  mpq(203, 45),
+    1: -mpq(87, 5),
+    2:  mpq(117, 4),
+    3: -mpq(254, 9),
+    4:  mpq(33, 2),
+    5: -mpq(27, 5),
+    6:  mpq(137, 180)
+    }
+
+osd[2, 6] = {
+    0:  mpq(469, 90),
+    1: -mpq(223, 10),
+    2:  mpq(879, 20),
+    3: -mpq(949, 18),
+    4:  mpq(41),
+    5: -mpq(201, 10),
+    6:  mpq(1019, 180),
+    7: -mpq(7, 10)
+    }
+
+osd[2, 7] = {
+    0:  mpq(29531, 5040),
+    1: -mpq(962, 35),
+    2:  mpq(621, 10),
+    3: -mpq(4006, 45),
+    4:  mpq(691, 8),
+    5: -mpq(282, 5),
+    6:  mpq(2143, 90),
+    7: -mpq(206, 35),
+    8:  mpq(363, 560)
+    }
+
+@
+
+<<Coefficients for one-sided FD approximations>>=
+
+osd[3, 1] = {
+    0: -mpq(1),
+    1:  mpq(3),
+    2: -mpq(3),
+    3:  mpq(1)
+    }
+
+osd[3, 2] = {
+    0: -mpq(5, 2),
+    1:  mpq(9),
+    2: -mpq(12),
+    3:  mpq(7),
+    4: -mpq(3,2)
+    }
+
+osd[3, 3] = {
+    0: -mpq(17, 4),
+    1:  mpq(71, 4),
+    2: -mpq(59, 2),
+    3:  mpq(49, 2),
+    4: -mpq(41, 4),
+    5:  mpq(7, 4)
+    }
+
+osd[3, 4] = {
+    0: -mpq(49, 8),
+    1:  mpq(29),
+    2: -mpq(461, 8),
+    3:  mpq(62),
+    4: -mpq(307, 8),
+    5:  mpq(13),
+    6: -mpq(15, 8)
+    }
+
+osd[3, 5] = {
+    0: -mpq(967, 120),
+    1:  mpq(638, 15),
+    2: -mpq(3929, 40),
+    3:  mpq(389, 3),
+    4: -mpq(2545, 24),
+    5:  mpq(268, 5),
+    6: -mpq(1849, 120),
+    7:  mpq(29, 15)
+    }
+
+osd[3, 6] = {
+    0: -mpq(801, 80),
+    1:  mpq(349, 6),
+    2: -mpq(18353, 120),
+    3:  mpq(2391, 10),
+    4: -mpq(1457, 6),
+    5:  mpq(4891, 30),
+    6: -mpq(561, 8),
+    7:  mpq(527, 30),
+    8: -mpq(469, 240)}
+
+@
+
+<<Coefficients for one-sided FD approximations>>=
+
+osd[4, 1] = {
+    0:  mpq(1),
+    1: -mpq(4),
+    2:  mpq(6),
+    3: -mpq(4),
+    4:  mpq(1)}
+
+osd[4, 2] = {
+    0:  mpq(3),
+    1: -mpq(14),
+    2:  mpq(26),
+    3: -mpq(24),
+    4:  mpq(11),
+    5: -mpq(2)}
+    
+osd[4, 3] = {
+    0:  mpq(35, 6),
+    1: -mpq(31),
+    2:  mpq(137, 2),
+    3: -mpq(242, 3),
+    4:  mpq(107, 2),
+    5: -mpq(19),
+    6:  mpq(17, 6)}
+
+osd[4, 4] = {
+    0:  mpq(28, 3),
+    1: -mpq(111, 2),
+    2:  mpq(142),
+    3: -mpq(1219, 6),
+    4:  mpq(176),
+    5: -mpq(185, 2),
+    6:  mpq(82, 3),
+    7: -mpq(7, 2)
+    }
+
+osd[4, 5] = {
+    0:  mpq(1069, 80),
+    1: -mpq(1316, 15),
+    2:  mpq(15289, 60),
+    3: -mpq(2144, 5),
+    4:  mpq(10993, 24),
+    5: -mpq(4772, 15),
+    6:  mpq(2803, 20),
+    7: -mpq(536, 15),
+    8:  mpq(967, 240)
+    }
+
+@
+
+Centered finite difference approximation to first derivatives~\cite[Table
+  3.1-1 on p.~16]{Fornberg:1998a}.
+
+<<Coefficients for centered FD approximations>>=
+cd = dict()
+cd[1, 2] ={
+    -1: -mpq(1, 2),
+    +0:  mpq(0),
+    +1:  mpq(1, 2)
+    }
+
+cd[1, 4] = {
+    -2:  mpq(1, 12),
+    -1: -mpq(2, 3),
+    +0:  mpq(0),
+    +1:  mpq(2, 3),
+    +2: -mpq(1, 12)
+    }
+
+cd[1, 6] = {
+    -3: -mpq(1, 60),
+    -2:  mpq(3, 20),
+    -1: -mpq(3, 4),
+    +0:  mpq(0),
+    +1:  mpq(3, 4),
+    +2: -mpq(3, 20),
+    +3:  mpq(1, 60)
+    }
+
+cd[1, 8] = {
+    -4:  mpq(1, 280),
+    -3: -mpq(4, 105),
+    -2:  mpq(1, 5),
+    -1: -mpq(4, 5),
+    +0:  mpq(0),
+    +1:  mpq(4, 5),
+    +2: -mpq(1, 5),
+    +3:  mpq(4, 105),
+    +4: -mpq(1, 280)
+    }
+
+@
+
+Centered finite difference approximation to second derivatives~\cite[Table
+  3.1-1 on p.~16]{Fornberg:1998a}.
+
+<<Coefficients for centered FD approximations>>=
+cd[2, 2] = {
+    -1: mpq(1),
+    +0: -mpq(2),
+    +1: mpq(1)
+    }
+
+cd[2, 4] = {
+    -2: -mpq(1, 12),
+    -1: mpq(4, 3),
+    +0: -mpq(5, 2),
+    +1: mpq(4, 3),
+    +2: -mpq(1, 12)
+    }
+
+cd[2, 6] = {
+    -3:  mpq(1, 90),
+    -2: -mpq(3, 20),
+    -1:  mpq(3, 2),
+    +0: -mpq(49, 18),
+    +1:  mpq(3, 2),
+    +2: -mpq(3, 20),
+    +3:  mpq(1, 90)
+    }
+
+cd[2, 8] = {
+    -4: -mpq(1, 560),
+    -3:  mpq(8, 315),
+    -2: -mpq(1, 5),
+    -1:  mpq(8, 5),
+    +0: -mpq(205, 72),
+    +1:  mpq(8, 5),
+    +2: -mpq(1, 5),
+    +3:  mpq(8, 315),
+    +4: -mpq(1, 560)
+    }
+
+@
+
+<<Coefficients for centered FD approximations>>=
+cd[3, 2] = {
+    -2:  -mpq(1, 2),
+    -1:   mpq(1),
+    +0:   mpq(0),
+    +1:  -mpq(1),
+    +2:   mpq(1, 2)
+    }
+
+cd[3, 4] = {
+    -3:  mpq(1, 8),
+    -2: -mpq(1),
+    -1:  mpq(13, 8),
+    +0:  mpq(0),
+    +1: -mpq(13, 8),
+    +2:  mpq(1),
+    +3: -mpq(1, 8)
+    }
+
+cd[3, 6] = {
+    -4: -mpq(7, 240),
+    -3:  mpq(3, 10),
+    -2: -mpq(169, 120),
+    -1:  mpq(61, 30),
+    +0:  mpq(0),
+    +1: -mpq(61, 30),
+    +2:  mpq(169, 120),
+    +3: -mpq(3, 10),
+    +4:  mpq(7, 240)
+    }
+
+@
+
+<<Coefficients for centered FD approximations>>=
+cd[4, 2] = {
+    -2:  mpq(1),
+    -1: -mpq(4),
+    +0:  mpq(6),
+    +1: -mpq(4),
+    +2:  mpq(1)
+    }
+
+cd[4, 4] = {
+    -3: -mpq(1, 6),
+    -2:  mpq(2),
+    -1: -mpq(13, 2),
+    +0:  mpq(28, 3),
+    +1: -mpq(13, 2),
+    +2:  mpq(2),
+    +3: -mpq(1, 6)
+    }
+
+cd[4, 6] = {
+    -4:  mpq(7, 240),
+    -3: -mpq(2, 5),
+    -2:  mpq(169, 60),
+    -1: -mpq(122, 15),
+    +0:  mpq(91, 8),
+    +1: -mpq(122, 15),
+    +2:  mpq(169, 60),
+    +3: -mpq(2, 5),
+    +4:  mpq(7, 240)}
+
+@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\clearpage
+\bibliographystyle{unsrt}
+\bibliography{TransportPDE}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
