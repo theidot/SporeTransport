@@ -1,0 +1,177 @@
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Unit testing}
+\label{sec:unit_testing}
+
+The [[unittest]] module provides a [[TestCase]] class that is
+customized to invoke the tests defined below.
+
+<<Unit test framework>>=
+
+class TestFiniteDifferences(unittest.TestCase):
+    <<Test sums of coefficients>>
+    <<Test action of stencils>>
+    <<Test action of operators>>
+@
+
+Running the [[FiniteDifferences.py]] source file as a script will
+automatically invoke the unit test framework.        
+
+<<Main program to run unit tests>>=
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
+
+@
+    
+The finite difference coefficents satisfy~\cite{Fornberg:1988}
+\begin{equation}
+  \sum_{\nu} c^{k}_{n, \nu} = \begin{cases}
+    1 & \text{if $k=0$} \\
+    0 & \text{otherwise}
+  \end{cases}
+  \label{eq:coefficient_sums}
+\end{equation}
+
+Since the coefficients are stored as multiple precision rationals, it
+makes sense to require that Equation~\ref{eq:coefficient_sums} be 
+satisfied exactly using rational arithmetic operations.
+
+<<Test sums of coefficients>>=
+def validate_scheme(scheme):
+    msg = """\
+          Error detected for approximation of order {0}\
+          of derivatives of order {1}: sum is {2}\
+          but should be {3}\
+          """
+    count = 0
+    for (k, n) in sorted(scheme.keys()):
+        coeff = scheme[(k, n)]
+        s = sum(coeff.values())
+        if k == 0 :
+            tst = mpq(1, 1)
+        else:
+            tst = mpq(0, 1)
+        if abs(float(tst-s)) > 0:
+            print(msg.format(k, n, s, tst))
+            print(coeff)
+            count += 1
+
+    return count
+
+@
+
+The actual unit tests involves ensuring that the coefficient of both
+the one-sided and centered stencils obey
+Equation~\ref{eq:coefficient_sums}.
+
+<<Test sums of coefficients>>=
+def test_sums(self):
+    err_count = TestFiniteDifferences.validate_scheme(FiniteDifferences._osd)
+    err_count += TestFiniteDifferences.validate_scheme(FiniteDifferences._cd)
+    self.assertEqual(err_count, 0)
+
+@
+    
+The action of the finite difference stencils and operators can easily
+be tested on trigonometric functions whose period matches the grid.
+
+<<Test action of stencils>>=
+def validate_stencils(scheme, diff):
+    from math import factorial
+    err_count = 0
+    N = 256
+    dx = 1.0/float(N)
+    s = 2.0*np.pi*dx
+    grid = s*np.arange(N)
+    print('Derivative      order          Max. deviation')
+    rec = '{0:10} {1:10}      {2}'
+    for (k, n) in sorted(scheme.keys()):
+        q = np.cos(grid)
+        if k == 1:
+            tst = -np.sin(grid)
+        elif k == 2:
+            tst = -np.cos(grid)
+        elif k == 3:
+            tst = np.sin(grid)
+        elif k == 4:
+            tst = np.cos(grid)
+        else:
+            errmsg = 'Approximations of order {0}, {1} not handled'
+            raise RuntimeError(errmsg.format(k, n))
+        r = (1.0/s**k)*diff(q, k, n)
+        dev = max([abs(d) for d in r - tst])
+        print(rec.format(k, n, dev))
+        if dev > 10.0*factorial(n)*s**(n):
+            err_count += 1
+
+    return err_count
+
+<<Test action of stencils>>=
+def test_stencils(self):
+    validate = TestFiniteDifferences.validate_stencils
+    print('\nOne-sided difference stencils')
+    count = validate(FiniteDifferences._osd,
+                     FiniteDifferences.periodic_one_sided_stencil)
+    print('\nCentered difference stencils')
+    count += validate(FiniteDifferences._cd,
+                      FiniteDifferences.periodic_centered_stencil)
+    self.assertEqual(count, 0)
+
+@ 
+
+<<Test action of operators>>=
+def validate_periodic_operators(scheme, diff):
+    from math import factorial
+    err_count = 0
+    N = 256
+    dx = 1.0/float(N)
+    s = 2.0*np.pi*dx
+    grid = s*np.arange(N)
+    print('Derivative      order          Max. deviation')
+    rec = '{0:10} {1:10}      {2}'
+    for (k, n) in sorted(scheme.keys()):
+        q = np.cos(grid)
+        if k == 1:
+            tst = -np.sin(grid)
+        elif k == 2:
+            tst = -np.cos(grid)
+        elif k == 3:
+            tst = np.sin(grid)
+        elif k == 4:
+            tst = np.cos(grid)
+        else:
+            errmsg = 'Approximations of order {0}, {1} not handled'
+            raise RuntimeError(errmsg.format(k, n))
+        r = (1.0/s**k)*diff(N, k, n)*q
+        dev = max([abs(d) for d in r - tst])
+        print(rec.format(k, n, dev))
+        if dev > 10.0*factorial(n)*s**(n):
+            err_count += 1
+
+    return err_count
+
+<<Test action of operators>>=
+def test_periodic_operators(self):
+    validate = TestFiniteDifferences.validate_periodic_operators
+    print('\nOne-sided difference operators (periodic)')
+    count = validate(FiniteDifferences._osd,
+                     FiniteDifferences.periodic_one_sided_op)
+    print('\nCentered difference operators (periodic)')
+    count += validate(FiniteDifferences._cd,
+                      FiniteDifferences.periodic_centered_op)
+    self.assertEqual(count, 0)
+
+<<Test action of operators>>=
+@unittest.skip('*** Test of non-periodic operators not implemented ***')
+def test_nonperiodic_operators(self):
+    self.defaultTestResult()
+    # print('\nOne-sided difference operators (non-periodic)')    
+    # count = validate(FiniteDifferences._osd,
+    #                  FiniteDifferences.nonperiodic_one_sided_op)
+    # print('\nCentered difference operators (non-periodic)')
+    # count += validate(FiniteDifferences._cd,
+    #                   FiniteDifferences.nonperiodic_centered_op)
+    # self.assertEqual(count, 0)

@@ -4,6 +4,8 @@
 
 \usepackage{graphicx,noweb,fullpage}
 
+\includeonly{Disclaimer,FDTest,FDCoefficients}
+
 \begin{document}
 
 @
@@ -121,6 +123,7 @@ class FiniteDifferences(object):
     <<Coefficients for one-sided FD approximations>>
     <<Coefficients for centered FD approximations>>
     <<Finite differences on periodic lattices>>
+    <<Finite differences on nonperiodic lattices>>    
 
 @ 
 
@@ -129,7 +132,7 @@ periodic lattices using cyclic permutations of vectors.
 
 <<Finite differences on periodic lattices>>=
 def periodic_one_sided_stencil(u, dorder, aorder=2):
-    '''Apply one-sided stencil for derivative to vector'''
+    '''Apply one-sided stencil for derivative to vector (periodic)'''
     
     v = np.zeros_like(u)
     for offset, coeff in FiniteDifferences._osd[dorder, aorder].items():
@@ -146,7 +149,9 @@ are used to create two separate diagonals to enforce periodicity.
 
 <<Finite differences on periodic lattices>>=
 def periodic_one_sided_op(N,  der_order, approx_order=2):
-    '''Compute N-dimensional sparse matrix representation for one-sided difference approximation'''
+    '''Compute N-dimensional sparse matrix representation for 
+       one-sided difference approximation (periodic)
+    '''
     
     offsets = list()
     coeffs  = list()
@@ -166,7 +171,7 @@ non-periodic lattices using cyclic permutation of vectors.
 <<Finite differences on periodic lattices>>=
 
 def periodic_centered_stencil(u, dorder, aorder=2):
-    '''Apply centered difference stenciy to vector'''
+    '''Apply centered difference stencil to vector (periodic)'''
     
     v = np.zeros_like(u)
     for offset, coeff in FiniteDifferences._cd[dorder, aorder].items():
@@ -185,7 +190,8 @@ offsets may be positive or negative, which are handled separately.
 
 def periodic_centered_op(N,  der_order, approx_order=2):
     '''Compute N-dimensional sparse matrix representation 
-       for centered difference approximation'''
+       for centered difference approximation (periodic)
+    '''
     
     offsets = list()
     coeffs  = list()
@@ -202,589 +208,44 @@ def periodic_centered_op(N,  der_order, approx_order=2):
 
 @
 
-\section{Unit testing}
-\label{sec:unit_testing}
+Matrix representations of difference operators on non-periodic
+lattices have a circulant structure, but lack the lower left and
+upper right corners are empty that arise in the periodic case.
 
-The [[unittest]] module provides a [[TestCase]] class that is
-customized to invoke the tests defined below.
-
-<<Unit test framework>>=
-
-class TestFiniteDifferences(unittest.TestCase):
-    <<Test sums of coefficients>>
-    <<Test action of stencils>>
-    <<Test action of operators>>
-@
-
-Running the [[FiniteDifferences.py]] source file as a script will
-automatically invoke the unit test framework.        
-
-<<Main program to run unit tests>>=
-
-if __name__ == '__main__':
-    unittest.main()
-
-@
+<<Finite differences on nonperiodic lattices>>=
+def nonperiodic_one_sided_op(N,  der_order, approx_order=2):
+    '''Compute N-dimensional sparse matrix representation for
+       one-sided difference approximation (non-periodic)
+    '''
     
-The finite difference coefficents satisfy~\cite{Fornberg:1988}
-\begin{equation}
-  \sum_{\nu} c^{k}_{n, \nu} = \begin{cases}
-    1 & \text{if $k=0$} \\
-    0 & \text{otherwise}
-  \end{cases}
-  \label{eq:coefficient_sums}
-\end{equation}
+    offsets = list()
+    coeffs  = list()
+    for offset, coeff in FiniteDifferences._osd[der_order, approx_order].items():
+        offsets.append(offset)
+        coeffs.append(float(coeff))
+    return diags(coeffs, offsets, shape=(N, N), dtype=np.float).tocsr()
 
-Since the coefficients are stored as multiple precision rationals, it
-makes sense to require that Equation~\ref{eq:coefficient_sums} be 
-satisfied exactly using rational arithmetic operations.
-
-<<Test sums of coefficients>>=
-def validate_scheme(scheme):
-    msg = """\
-          Error detected for approximation of order {0}\
-          of derivatives of order {1}: sum is {2}\
-          but should be {3}\
-          """
-    count = 0
-    for (k, n) in sorted(scheme.keys()):
-        coeff = scheme[(k, n)]
-        s = sum(coeff.values())
-        if k == 0 :
-            tst = mpq(1, 1)
-        else:
-            tst = mpq(0, 1)
-        if abs(float(tst-s)) > 0:
-            print(msg.format(k, n, s, tst))
-            print(coeff)
-            count += 1
-
-    return count
-
-@
-
-The actual unit tests involves ensuring that the coefficient of both
-the one-sided and centered stencils obey
-Equation~\ref{eq:coefficient_sums}.
-
-<<Test sums of coefficients>>=
-def test_sums(self):
-    err_count = TestFiniteDifferences.validate_scheme(FiniteDifferences._osd)
-    err_count += TestFiniteDifferences.validate_scheme(FiniteDifferences._cd)
-    self.assertEqual(err_count, 0)
-
-@
+def nonperiodic_centered_op(N,  der_order, approx_order=2):
+    '''Compute N-dimensional sparse matrix representation 
+       for centered difference approximation (non-periodic)
+    '''
     
-The action of the finite difference stencils and operators can easily
-be tested on trigonometric functions whose period matches the grid.
-
-<<Test action of stencils>>=
-def validate_stencils(scheme, diff):
-    from math import factorial
-    err_count = 0
-    N = 256
-    dx = 1.0/float(N)
-    s = 2.0*np.pi*dx
-    grid = s*np.arange(N)
-    print('Derivative      order          Max. deviation')
-    rec = '{0:10} {1:10}      {2}'
-    for (k, n) in sorted(scheme.keys()):
-        q = np.cos(grid)
-        if k == 1:
-            tst = -np.sin(grid)
-        elif k == 2:
-            tst = -np.cos(grid)
-        elif k == 3:
-            tst = np.sin(grid)
-        elif k == 4:
-            tst = np.cos(grid)
-        else:
-            errmsg = 'Approximations of order {0}, {1} not handled'
-            raise RuntimeError(errmsg.format(k, n))
-        r = (1.0/s**k)*diff(q, k, n)
-        dev = max([abs(d) for d in r - tst])
-        print(rec.format(k, n, dev))
-        if dev > 10.0*factorial(n)*s**(n):
-            err_count += 1
-
-    return err_count
-
-<<Test action of stencils>>=
-def test_stencils(self):
-    validate = TestFiniteDifferences.validate_stencils
-    print('\nOne-sided difference stencils')
-    count = validate(FiniteDifferences._osd,
-                     FiniteDifferences.periodic_one_sided_stencil)
-    print('\nCentered difference stencils')
-    count += validate(FiniteDifferences._cd,
-                      FiniteDifferences.periodic_centered_stencil)
-    self.assertEqual(count, 0)
-
-@ 
-
-<<Test action of operators>>=
-def validate_operators(scheme, diff):
-    from math import factorial
-    err_count = 0
-    N = 256
-    dx = 1.0/float(N)
-    s = 2.0*np.pi*dx
-    grid = s*np.arange(N)
-    print('Derivative      order          Max. deviation')
-    rec = '{0:10} {1:10}      {2}'
-    for (k, n) in sorted(scheme.keys()):
-        q = np.cos(grid)
-        if k == 1:
-            tst = -np.sin(grid)
-        elif k == 2:
-            tst = -np.cos(grid)
-        elif k == 3:
-            tst = np.sin(grid)
-        elif k == 4:
-            tst = np.cos(grid)
-        else:
-            errmsg = 'Approximations of order {0}, {1} not handled'
-            raise RuntimeError(errmsg.format(k, n))
-        r = (1.0/s**k)*diff(N, k, n)*q
-        dev = max([abs(d) for d in r - tst])
-        print(rec.format(k, n, dev))
-        if dev > 10.0*factorial(n)*s**(n):
-            err_count += 1
-
-    return err_count
-
-<<Test action of operators>>=
-def test_operators(self):
-    validate = TestFiniteDifferences.validate_operators
-    print('\nOne-sided difference operators')
-    count = validate(FiniteDifferences._osd,
-                     FiniteDifferences.periodic_one_sided_op)
-    print('\nCentered difference operators')
-    count += validate(FiniteDifferences._cd,
-                      FiniteDifferences.periodic_centered_op)
-    self.assertEqual(count, 0)
+    offsets = list()
+    coeffs  = list()
+    for offset, coeff in FiniteDifferences._cd[der_order, approx_order].items():
+        offsets.append(offset)
+        coeffs.append(float(coeff))
+    return diags(coeffs, offsets, shape=(N, N), dtype=np.float).tocsr()
 
 @
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \appendix
 
-\section{Explicit formulae for finite difference approximation}
-\label{sec:explicit_formulae}
-
-One-sided finite difference approximations to first derivatives~\cite[Table
-  3.1-2 on p.~17]{Fornberg:1998a}.
-
-<<Coefficients for one-sided FD approximations>>=
-_osd = dict()
-
-_osd[1, 1] = {
-    0: mpq(-1),
-    1: mpq(1)
-    }
-
-_osd[1, 2] = {
-    0: mpq(-3, 2),
-    1: mpq(2),
-    2: mpq(-1, 2)
-    }
-
-_osd[1, 3] = {
-    0: mpq(-11, 6),
-    1: mpq(3),
-    2: mpq(-3, 2),
-    3: mpq(1, 3)
-    }
-
-_osd[1, 4] = {
-    0: mpq(-25, 12),
-    1: mpq(4),
-    2: mpq(-3),
-    3: mpq(4, 3),
-    4: mpq(-1, 4)
-    }
-
-_osd[1, 5] = {
-    0: mpq(-137, 60),
-    1: mpq(5),
-    2: mpq(-5),
-    3: mpq(10, 3),
-    4: mpq(-5, 4),
-    5: mpq(1, 5)
-    }
-
-_osd[1, 6] = {
-    0: mpq(-49, 20),
-    1: mpq(6),
-    2: mpq(-15, 2),
-    3: mpq(20, 3),
-    4: mpq(-15, 4),
-    5: mpq(6, 5),
-    6: mpq(-1, 6)
-    }
-
-_osd[1, 7] = {
-    0: mpq(-363, 140),
-    1: mpq(7),
-    2: mpq(-21, 2),
-    3: mpq(35, 3),
-    4: mpq(-35, 4),
-    5: mpq(21, 5),
-    6: mpq(-7, 6),
-    7: mpq(1, 7)
-    }
-
-_osd[1, 8] = {
-    0: mpq(-761, 280),
-    1: mpq(8),
-    2: mpq(-14),
-    3: mpq(56, 3),
-    4: mpq(-35, 2),
-    5: mpq(56, 5),
-    6: mpq(-14, 3),
-    7: mpq(8, 7),
-    8: mpq(-1, 8)
-    }
-
-@
-
-One-sided finite difference approximations to second order
-derivatives~\cite[Table 3.1-2 on p.~17]{Fornberg:1998a}.
-
-<<Coefficients for one-sided FD approximations>>=
-_osd[2, 1] = {
-    0: mpq(1),
-    1: -mpq(2),
-    2: mpq(1)
-    }
-
-_osd[2, 2] = {
-    0: mpq(2),
-    1: -mpq(5),
-    2: mpq(4),
-    3:-mpq(1)
-    }
-
-_osd[2, 3] = {
-    0:  mpq(35, 12),
-    1: -mpq(26, 3),
-    2:  mpq(19, 2),
-    3: -mpq(14, 3),
-    4:  mpq(11, 12)
-    }
-
-_osd[2, 4] = {
-    0:  mpq(15, 4),
-    1: -mpq(77, 6),
-    2:  mpq(107, 6),
-    3: -mpq(13, 1),
-    4:  mpq(61, 12),
-    5: -mpq(5, 6)
-    }
-
-_osd[2, 5] = {
-    0:  mpq(203, 45),
-    1: -mpq(87, 5),
-    2:  mpq(117, 4),
-    3: -mpq(254, 9),
-    4:  mpq(33, 2),
-    5: -mpq(27, 5),
-    6:  mpq(137, 180)
-    }
-
-_osd[2, 6] = {
-    0:  mpq(469, 90),
-    1: -mpq(223, 10),
-    2:  mpq(879, 20),
-    3: -mpq(949, 18),
-    4:  mpq(41),
-    5: -mpq(201, 10),
-    6:  mpq(1019, 180),
-    7: -mpq(7, 10)
-    }
-
-_osd[2, 7] = {
-    0:  mpq(29531, 5040),
-    1: -mpq(962, 35),
-    2:  mpq(621, 10),
-    3: -mpq(4006, 45),
-    4:  mpq(691, 8),
-    5: -mpq(282, 5),
-    6:  mpq(2143, 90),
-    7: -mpq(206, 35),
-    8:  mpq(363, 560)
-    }
-
-@
-
-<<Coefficients for one-sided FD approximations>>=
-
-_osd[3, 1] = {
-    0: -mpq(1),
-    1:  mpq(3),
-    2: -mpq(3),
-    3:  mpq(1)
-    }
-
-_osd[3, 2] = {
-    0: -mpq(5, 2),
-    1:  mpq(9),
-    2: -mpq(12),
-    3:  mpq(7),
-    4: -mpq(3,2)
-    }
-
-_osd[3, 3] = {
-    0: -mpq(17, 4),
-    1:  mpq(71, 4),
-    2: -mpq(59, 2),
-    3:  mpq(49, 2),
-    4: -mpq(41, 4),
-    5:  mpq(7, 4)
-    }
-
-_osd[3, 4] = {
-    0: -mpq(49, 8),
-    1:  mpq(29),
-    2: -mpq(461, 8),
-    3:  mpq(62),
-    4: -mpq(307, 8),
-    5:  mpq(13),
-    6: -mpq(15, 8)
-    }
-
-_osd[3, 5] = {
-    0: -mpq(967, 120),
-    1:  mpq(638, 15),
-    2: -mpq(3929, 40),
-    3:  mpq(389, 3),
-    4: -mpq(2545, 24),
-    5:  mpq(268, 5),
-    6: -mpq(1849, 120),
-    7:  mpq(29, 15)
-    }
-
-_osd[3, 6] = {
-    0: -mpq(801, 80),
-    1:  mpq(349, 6),
-    2: -mpq(18353, 120),
-    3:  mpq(2391, 10),
-    4: -mpq(1457, 6),
-    5:  mpq(4891, 30),
-    6: -mpq(561, 8),
-    7:  mpq(527, 30),
-    8: -mpq(469, 240)}
-
-@
-
-<<Coefficients for one-sided FD approximations>>=
-
-_osd[4, 1] = {
-    0:  mpq(1),
-    1: -mpq(4),
-    2:  mpq(6),
-    3: -mpq(4),
-    4:  mpq(1)}
-
-_osd[4, 2] = {
-    0:  mpq(3),
-    1: -mpq(14),
-    2:  mpq(26),
-    3: -mpq(24),
-    4:  mpq(11),
-    5: -mpq(2)}
-    
-_osd[4, 3] = {
-    0:  mpq(35, 6),
-    1: -mpq(31),
-    2:  mpq(137, 2),
-    3: -mpq(242, 3),
-    4:  mpq(107, 2),
-    5: -mpq(19),
-    6:  mpq(17, 6)}
-
-_osd[4, 4] = {
-    0:  mpq(28, 3),
-    1: -mpq(111, 2),
-    2:  mpq(142),
-    3: -mpq(1219, 6),
-    4:  mpq(176),
-    5: -mpq(185, 2),
-    6:  mpq(82, 3),
-    7: -mpq(7, 2)
-    }
-
-_osd[4, 5] = {
-    0:  mpq(1069, 80),
-    1: -mpq(1316, 15),
-    2:  mpq(15289, 60),
-    3: -mpq(2144, 5),
-    4:  mpq(10993, 24),
-    5: -mpq(4772, 15),
-    6:  mpq(2803, 20),
-    7: -mpq(536, 15),
-    8:  mpq(967, 240)
-    }
-
-@
-
-Centered finite difference approximation to first derivatives~\cite[Table
-  3.1-1 on p.~16]{Fornberg:1998a}.
-
-<<Coefficients for centered FD approximations>>=
-_cd = dict()
-_cd[1, 2] ={
-    -1: -mpq(1, 2),
-    +0:  mpq(0),
-    +1:  mpq(1, 2)
-    }
-
-_cd[1, 4] = {
-    -2:  mpq(1, 12),
-    -1: -mpq(2, 3),
-    +0:  mpq(0),
-    +1:  mpq(2, 3),
-    +2: -mpq(1, 12)
-    }
-
-_cd[1, 6] = {
-    -3: -mpq(1, 60),
-    -2:  mpq(3, 20),
-    -1: -mpq(3, 4),
-    +0:  mpq(0),
-    +1:  mpq(3, 4),
-    +2: -mpq(3, 20),
-    +3:  mpq(1, 60)
-    }
-
-_cd[1, 8] = {
-    -4:  mpq(1, 280),
-    -3: -mpq(4, 105),
-    -2:  mpq(1, 5),
-    -1: -mpq(4, 5),
-    +0:  mpq(0),
-    +1:  mpq(4, 5),
-    +2: -mpq(1, 5),
-    +3:  mpq(4, 105),
-    +4: -mpq(1, 280)
-    }
-
-@
-
-Centered finite difference approximation to second derivatives~\cite[Table
-  3.1-1 on p.~16]{Fornberg:1998a}.
-
-<<Coefficients for centered FD approximations>>=
-_cd[2, 2] = {
-    -1: mpq(1),
-    +0: -mpq(2),
-    +1: mpq(1)
-    }
-
-_cd[2, 4] = {
-    -2: -mpq(1, 12),
-    -1: mpq(4, 3),
-    +0: -mpq(5, 2),
-    +1: mpq(4, 3),
-    +2: -mpq(1, 12)
-    }
-
-_cd[2, 6] = {
-    -3:  mpq(1, 90),
-    -2: -mpq(3, 20),
-    -1:  mpq(3, 2),
-    +0: -mpq(49, 18),
-    +1:  mpq(3, 2),
-    +2: -mpq(3, 20),
-    +3:  mpq(1, 90)
-    }
-
-_cd[2, 8] = {
-    -4: -mpq(1, 560),
-    -3:  mpq(8, 315),
-    -2: -mpq(1, 5),
-    -1:  mpq(8, 5),
-    +0: -mpq(205, 72),
-    +1:  mpq(8, 5),
-    +2: -mpq(1, 5),
-    +3:  mpq(8, 315),
-    +4: -mpq(1, 560)
-    }
-
-@
-
-Centered finite difference approximation to third derivatives~\cite[Table
-  3.1-1 on p.~16]{Fornberg:1998a}.
-
-<<Coefficients for centered FD approximations>>=
-_cd[3, 2] = {
-    -2:  -mpq(1, 2),
-    -1:   mpq(1),
-    +0:   mpq(0),
-    +1:  -mpq(1),
-    +2:   mpq(1, 2)
-    }
-
-_cd[3, 4] = {
-    -3:  mpq(1, 8),
-    -2: -mpq(1),
-    -1:  mpq(13, 8),
-    +0:  mpq(0),
-    +1: -mpq(13, 8),
-    +2:  mpq(1),
-    +3: -mpq(1, 8)
-    }
-
-_cd[3, 6] = {
-    -4: -mpq(7, 240),
-    -3:  mpq(3, 10),
-    -2: -mpq(169, 120),
-    -1:  mpq(61, 30),
-    +0:  mpq(0),
-    +1: -mpq(61, 30),
-    +2:  mpq(169, 120),
-    +3: -mpq(3, 10),
-    +4:  mpq(7, 240)
-    }
-
-@
-
-Centered finite difference approximation to fourth derivatives~\cite[Table
-  3.1-1 on p.~16]{Fornberg:1998a}.
-
-<<Coefficients for centered FD approximations>>=
-
-_cd[4, 2] = {
-    -2:  mpq(1),
-    -1: -mpq(4),
-    +0:  mpq(6),
-    +1: -mpq(4),
-    +2:  mpq(1)
-    }
-
-_cd[4, 4] = {
-    -3: -mpq(1, 6),
-    -2:  mpq(2),
-    -1: -mpq(13, 2),
-    +0:  mpq(28, 3),
-    +1: -mpq(13, 2),
-    +2:  mpq(2),
-    +3: -mpq(1, 6)
-    }
-
-_cd[4, 6] = {
-    -4:  mpq(7, 240),
-    -3: -mpq(2, 5),
-    -2:  mpq(169, 60),
-    -1: -mpq(122, 15),
-    +0:  mpq(91, 8),
-    +1: -mpq(122, 15),
-    +2:  mpq(169, 60),
-    +3: -mpq(2, 5),
-    +4:  mpq(7, 240)}
-
-@
+\include{Disclaimer}
+\include{FDTest}
+\include{FDCoefficients}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

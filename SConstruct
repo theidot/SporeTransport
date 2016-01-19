@@ -28,10 +28,15 @@ env.Append(BUILDERS = {'NWtoPy' : Builder(action='$TANGLE -R${TARGET.file} $SOUR
 # Documentation
 ######################################################################
 
-transtex = env.NWtoTeX(source=['TransportPDECauchy.nw', 'Disclaimer.nw'],
-                       target='TransportPDECauchy.tex')
-fdtex = env.NWtoTeX('FiniteDifferences')
+transtex = env.NWtoTeX('TransportPDECauchy')
+env.Depends(transtex, 'Disclaimer.tex')
 transpdf = env.PDF(transtex)
+
+fdtex = env.NWtoTeX('FiniteDifferences')
+disclaimer = env.NWtoTeX('Disclaimer')
+fdtest = env.NWtoTeX('FDTest')
+fdcoeff = env.NWtoTeX('FDCoefficients')
+env.Depends(fdtex, ['Disclaimer.tex', 'FDTest.tex', 'FDCoefficients.tex'])
 fdpdf = env.PDF(fdtex)
 
 pdf = [fdpdf, transpdf]
@@ -50,7 +55,7 @@ AdvTransport1D = env.NWtoPy(source=['TransportPDECauchy.nw', 'Disclaimer.nw'],
 DiffTransport1D = env.NWtoPy(source=['TransportPDECauchy.nw', 'Disclaimer.nw'],
 		             target='DiffTransport1D.py')
 
-FiniteDifferences = env.NWtoPy(source=['FiniteDifferences.nw', 'Disclaimer.nw'],
+FiniteDifferences = env.NWtoPy(source=['FiniteDifferences.nw', 'FDTest.nw', 'Disclaimer.nw', 'FDCoefficients.nw'],
 		             target='FiniteDifferences.py')
 
 sources = [TransportPDECauchy,
