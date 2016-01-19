@@ -43,13 +43,127 @@ from the function values at grid points.  Given the values of $f:
 the derivatives of $f$ are approximated as
 \begin{equation}
   \left.\frac{d^kf}{dx^k}\right|_{x=x_{0}} =
-  \sum_{\nu=0}^{n} c^{k}_{n, \nu} f(x_{\nu}) + \mathcal{O}\left(\Delta x^{k-n+1}\right)
+  \sum_{\nu=0}^{n} c^{k}_{n, \nu} f(x_{\nu}) + \mathcal{O}\left(\Delta
+  x^{k-n+1}\right)
+  \label{eq:fd_approx_deriv}
 \end{equation}
 The coefficients are tabulated in many places, including the text by
 Fornberg~\cite{Fornberg:1998a} which includes a wealth of theoretical
 insight into the behavior of the finite difference methods and
 practical guidance on their implementation.  More details can be found
-in other works by the same author~\cite{Fornberg:1988, Fornberg:1998b}.
+in other works by the same author~\cite{Fornberg:1988,
+  Fornberg:1998b}.
+
+Attention here will be limited to differential equations defined on
+closed intervals of the real line so that conditions on the function
+and/or its derivatives must be specified at the end points of the
+interval in order to properly define the domain of the differential
+operator being discretized.  Three different classes of boundary
+conditions will be treated here
+\begin{itemize}
+  %
+\item Periodic -- enforcement of periodicity of functions with period
+  equal to the length of the interval
+  %
+\item Dirichlet -- specification of the value of a function at the
+  end point
+  %
+\item Neumann -- specification of the value of a derivative of
+  function at an end point
+  %
+\end{itemize}
+
+In all cases, the matrix representations of one dimensional finite
+difference operators have a natural Toeplitz
+structure~\cite{HornJohnson:1985} where the coefficients in
+Equation~\ref{eq:fd_approx_deriv}) appear along diagonals.
+A Toeplitz matrix has the form
+\begin{equation}
+  A_N =
+  \begin{pmatrix}
+    a_{0}  & a_{1}  & a_{2} & \ldots & a_{N-2} & a_{N-1} \\
+    a_{-1} & a_{0}  & a_{1} & \ldots & a_{N-3} & a_{N-2} \\
+    a_{-2} & a_{-1} & a_{0} & \ldots & a_{N-4} & a_{N-3} \\
+    \vdots & \vdots & \ddots & \ddots & \ddots & \vdots \\
+    a_{-n+1} & a_{-n+2} & a_{-n+3} \cdots & a_{-1} & a_{0} 
+  \end{pmatrix}
+\end{equation}
+
+Two special Toeplitz matrices will be used to organize the
+presentation.  The first matrix, $L_N$, has zeros everywhere except
+the first superdiagonal where it has unit entries,
+\begin{equation}
+  L_{N} = \begin{pmatrix}
+    0 & 1 & 0 & \ldots & 0 \\
+    0 & 0 & 1 & & \vdots \\
+    \vdots & \ddots & \ddots & \ddots & 0 \\
+    0 & 0 & \ddots & 0 & 1 \\
+    0 & 0 & \ldots & 0 & 0
+    \end{pmatrix}
+\end{equation}
+It is easy to verify that $J_{N}$ represents a left shift of a
+sequence of elements; the first element is replaced by the second and
+so forth until the last element is replaced by zero.  The second
+Toeplitz matrix, $C_{N}$, differs from $L_{N}$ by the insertion of a
+unit element in the extreme lower left corner
+\begin{equation}
+  C_{N} = \begin{pmatrix}
+    0 & 1 & 0 & \ldots & 0 \\
+    0 & 0 & 1 & & \vdots \\
+    \vdots & \ddots & \ddots & \ddots & 0 \\
+    0 & 0 & \ddots & 0 & 1 \\
+    1 & 0 & \ldots & 0 & 0
+  \end{pmatrix}
+  \label{eq:cyclic_left_shift_def}
+\end{equation}
+Again, it is easy to verify that $C_{N}$ implements a $cyclic$ left
+permutation; the first element is moved to the last position, the second is
+moved to the first, the third to the second, and so forth.  Squaring
+$C_{N}$ implements a cyclic shift by two elements
+\begin{equation}
+  C^{2}_{N} = \begin{pmatrix}
+    0 & 0 & 1 & 0 & \ldots & 0 \\
+    0 & 0 & 0 & 1 & & \vdots \\
+    \vdots & \ddots & \ddots & \ddots & 1 \\
+    1 & 0 & \ddots & 0 & 0 \\
+    0 & 1 & \ldots & 0 & 0
+  \end{pmatrix}
+  \label{eq:cyclic_left_shift_squared}
+\end{equation}
+Iterating this process reveals $C^{N}_{N} = I_{N}$; $N$ cyclic left
+permutations of an $N$-element sequence returns all elements back to
+their original locations.
+
+Straightforward manipulations also show that the transpose
+$J_{N}^{\text{tr}}$ implements right shifts, and similarly
+$C_{N}^{\text{tr}}$ implements cyclic right shifts.  A cyclic left
+shift followed by a cyclic right shift again returns all elements to
+their original location, i.e.,
+\begin{equation}
+  C_{N}^{\text{tr}}C_N = I_{N} = C_NC_{N}^{\text{tr}}
+  \label{eq:CtransposeC}
+\end{equation}
+In contrast,
+\begin{equation}
+  J_{N}^{\text{tr}} J_{N} = I_{N} - e_0e_0^{\text{tr}}
+  \label{eq:JtransposeJ}
+\end{equation}
+where $e_k^{\text{tr}}$ is the $k$ unit vector with a unit element at
+position $k$ and zeros elsewhere.  This formula has a simple intuitive
+interpretation -- the first element of the sequence is ``lost'' in the
+application of $J_{N}$ and subsequent application of
+$J_{N}^{\text{tr}}$ introduces a zero in its place and restores all of
+the other elements to their original position.
+  
+
+The special class of Toeplitz matrices of
+the form
+\begin{equation}
+A_{N} = \sum_{k=0}^{N-1} a_{k} C^{k}_{N}
+\end{equation}
+are called \emph{circulants} where, by convention, $C^{0}_{N} =
+I_{N}$.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -76,8 +190,8 @@ which contains definitions of two class, [[FiniteDifferences]] and
 
 @
 
-The [[FiniteDifferences]] class contains only class-level attributes
-and defines the entire public programming interface.
+The [[FiniteDifferences]] class defines the entire public programming
+interface.
 
 <<Define public programming interface>>=
 __all__ = ['FiniteDifferences']
@@ -117,6 +231,18 @@ NumPy~\cite{NumPy:2015} arrays to store vectors.
 import numpy as np
 
 @
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{[[FiniteDifferences]] class}
+\label{sec:finite_differences}
+
+The [[FiniteDifferences]] class contains only class-level attributes.
+Support is provided for both explicit and implicit schemes in one
+dimension.  Implicit difference schemes require a matrix
+representation of the finite difference operators while explicit
+schemes require the only the action of the operator on vectors.
+
 
 <<[[FiniteDifferences]] class>>=
 class FiniteDifferences(object):
